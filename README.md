@@ -84,33 +84,3 @@ client.summary_images()
 ```python
 client.update_image_tags("wip-test-update")
 ```
-
-
-
-
-
-
-cut_release(
-    "wip-test",
-    [Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf")],
-    Path(f"{tmp_folder}/charm_repos"),
-    credentials=credentials,
-    title="[KF-XXXX] Release 1.10",
-    juju_tf_version=">=0.14.0"
-)
-
-summary_pull_request(
-    "wip-test",
-    [Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf")],
-    Path(f"{tmp_folder}/charm_repos"),
-    credentials=credentials
-)
-
-summary_images(Path(f"{tmp_folder}/charm_repos"))
-
-update_image_tags(
-   "wip-test-update",
-    [Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf")],
-    Path(f"{tmp_folder}/charm_repos"),
-    credentials=credentials
-)

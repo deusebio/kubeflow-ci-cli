@@ -3,7 +3,7 @@ import subprocess
 
 import hcl2
 
-def get_juju_applications_names(filename: str="main.tf"):
+def get_juju_applications_names(filename: Path):
     with open(filename, 'r') as file:
         out = hcl2.load(file)
 

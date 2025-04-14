@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Module for parsing metadata.yaml file."""
-
+from enum import StrEnum
 from pathlib import Path
 
 import yaml
@@ -15,7 +15,12 @@ CHARMCRAFT_LINKS_DOCS_KEY = "documentation"
 METADATA_DOCS_KEY = "docs"
 METADATA_FILENAME = "metadata.yaml"
 METADATA_NAME_KEY = "name"
+METADATA_RESOURCE = "resources"
 
+
+class SourceMetadata(StrEnum):
+    METADATA="metadata.yaml"
+    CHARMCRAFT="charmcraft.yaml"
 
 class Metadata(NamedTuple):
     """Information within metadata file. Refer to: https://juju.is/docs/sdk/metadata-yaml.
@@ -26,9 +31,11 @@ class Metadata(NamedTuple):
         name: Name of the charm.
         docs: A link to a documentation cover page on Discourse.
     """
-
+    file: Path
     name: str
     docs: str | None
+    resources: dict
+    source: SourceMetadata
 
 
 class InputError(Exception):
@@ -107,7 +114,19 @@ def _parse_metadata_yaml(metadata_yaml: Path) -> Metadata:
     ):
         raise InputError(f"Invalid value for docs key: {docs}, expected a string value")
 
-    return Metadata(name=name, docs=docs)
+    if METADATA_RESOURCE not in metadata:
+        print(f"Missing resources in charm {name}")
+        images = {}
+    else:
+        images = {
+            key: value["upstream-source"]
+            for key, value in metadata.get(METADATA_RESOURCE, {}).items()
+            if value["type"] == "oci-image"
+        }
+
+    return Metadata(
+        file=metadata_yaml,name=name, docs=docs, resources=images, source=SourceMetadata.METADATA
+    )
 
 
 def _parse_charmcraft_yaml(charmcraft_yaml: Path) -> Metadata:
@@ -159,4 +178,4 @@ def _parse_charmcraft_yaml(charmcraft_yaml: Path) -> Metadata:
                 f"Invalid value for documentation key: {docs}, expected a string value"
             )
 
-    return Metadata(name=name, docs=docs)
+    return Metadata(file=charmcraft_yaml, name=name, docs=docs, resources={}, source=SourceMetadata.CHARMCRAFT)

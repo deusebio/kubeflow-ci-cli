@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from functools import cached_property
 from itertools import chain
 from typing import Any, cast
+from itertools import groupby
 
 from git import GitCommandError
 from git.diff import Diff
@@ -305,6 +306,21 @@ class Client:  # pylint: disable=too-many-public-methods
         """Return all local branches."""
         return {branch.name for branch in self._git_repo.heads}
 
+    @property
+    def remote_branches(self) -> dict[str, list[str]]:
+        branches = ([
+            parsed
+            for line in self._git_repo.git.branch("-r").split("\n")
+            if not "HEAD" in line
+            if (parsed := line.strip().split("/", maxsplit=1))
+        ])
+
+        return {
+            remote: [item[1] for item in group]
+            for remote, group in groupby(branches, lambda x: x[0])
+        }
+
+
     @contextmanager
     def with_branch(self, branch_name: str) -> Iterator["Client"]:
         """Return a context for operating within the given branch.
@@ -507,7 +523,7 @@ class Client:  # pylint: disable=too-many-public-methods
             # Create the branch if it doesn't exist
 
             self._git_repo.git.add("-A", directory)
-            self._git_repo.git.commit("-m", f"'{commit_msg}'")
+            self._git_repo.git.commit("-m", f"{commit_msg}")
             if push:
                 self.push(self.current_branch, force)
         except GitCommandError as exc:
@@ -722,6 +738,8 @@ class Client:  # pylint: disable=too-many-public-methods
         return base64.b64decode(content_file.content).decode("utf-8")
 
 
+logger = logging.getLogger(__name__)
+
 def _get_repository_name_from_git_url(remote_url: str) -> str:
     """Get repository name from git remote URL.
 
@@ -743,7 +761,6 @@ def _get_repository_name_from_git_url(remote_url: str) -> str:
         try:
             host, org, repo = pattern.match(remote_url).groups()
             url = f"{org}/{repo}"
-            print(url)
             return url
         except:
             raise InputError(f"Invalid remote repository url {remote_url=!r}")
@@ -820,7 +837,7 @@ def create_repository_client_from_url(
     full_path = base_path / os.path.basename(repository_fullname)
 
     if full_path.exists():
-        print(f"repository {full_path} already exists")
+        logger.info(f"repository {full_path} already exists")
         local_repo = Repo(full_path)
         if local_repo.remote().url != remote_url:
             raise InputError(

@@ -33,6 +33,17 @@ client.cut_release(
 
 #####
 
+from kfcicli.main import *
+from kfcicli.utils import setup_logging
+import json
+
+setup_logging(log_level="INFO")
+
+with open("credentials.json", "r") as fid:
+    credentials = GitCredentials(**json.loads(fid.read()))
+
+
+tmp_folder = "/home/deusebio/tmp/kfcicli"
 
 modules = [
     Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
@@ -71,7 +82,7 @@ client.canon_run(
     branch_name="kf-7255-update-tf-provider",
     title="[KF-7255] Update Juju provider",
     body="Updating juju provider requirement to >=0.14.0",
-    dry_run=True
+    dry_run=False
 )
 
 

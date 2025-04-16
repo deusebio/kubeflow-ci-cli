@@ -173,3 +173,20 @@ def environ(*remove, **update):
     finally:
         [env.pop(k) for k in remove_after]
         env.update(update_after)
+
+
+from functools import wraps
+from typing import TypeVar
+
+A=TypeVar("A")
+
+def safe(f: Callable[..., A]) -> Callable[..., A]:
+    """Decorator to convert unsafe functions to safe functions, that returns Either monads"""
+    @wraps(f)
+    def wrap(*args, **kwargs) -> A | None:
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            logging.getLogger(str(f)).warning(f"Catching function {f} with exception {e}")
+            return None
+    return wrap

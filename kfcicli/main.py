@@ -12,7 +12,8 @@ from kfcicli.images import ImageReference, get_tags
 from kfcicli.metadata import InputError, get as get_metadata, SourceMetadata
 from kfcicli.repository import Client, create_repository_client_from_url, \
     GitCredentials
-from kfcicli.utils import WithLogging
+from kfcicli.utils import WithLogging, safe
+from typing import Callable
 
 BLACK_LIST = ["https://github.com/canonical/mysql-k8s-operator"]
 
@@ -61,38 +62,53 @@ class KubeflowCI(WithLogging):
             else:
                 self.logger.warning(f"Missing selected branch {branch} in remote of repository {url}")
 
+            # Build LocalCharmRepo and skipping repositories that don't have charms
+            charms = [
+                local_charm
+                for charm in charms
+                if (local_charm := safe(
+                    lambda : LocalCharmRepo.from_charm_repo(charm, get_metadata(repo.base_path / charm.tf_module.parent))
+                )())
+            ]
+
+            if len(charms)==0:
+                continue
+
             yield repo, charms
+
 
     @staticmethod
     def _cut_charm_branch(repo: Client, charm: CharmRepo,
-                          juju_tf_version: str | None = None):
+                          juju_tf_version: str | None = None, dry_run: bool = False):
         from kfcicli.terraform import set_variable_field, set_version_field
 
         set_variable_field(
-            "channel", "default", charm.branch,
+            "channel", "default",
+            f"{charm.branch.removeprefix("track/")}/stable",
             filename=repo.base_path / charm.tf_module / "variables.tf"
         )
 
         if juju_tf_version:
             set_version_field(
                 required_version=None,
-                providers_version={"juju": ">=0.14.0"},
+                providers_version={"juju": juju_tf_version},
                 filename=repo.base_path / charm.tf_module / "versions.tf"
             )
 
         repo.update_branch(
             commit_msg=f"updating tracks for charm {charm.name}", directory=".",
-            push=True, force=True
+            push=not dry_run, force=True
         )
 
     def cut_release(
             self,
             branch_name: str,
             title: str,
-            juju_tf_version: str | None = None
+            juju_tf_version: str | None = None,
+            dry_run: bool = False
     ):
 
-        for repo, charms in self.iter_repos():
+        for repo, charms in self.repos:
 
             release_branch = charms[0].branch
 
@@ -105,19 +121,48 @@ class KubeflowCI(WithLogging):
 
             # Cut release branch
             repo.switch(release_branch)
-            repo.push()
+            if not dry_run:
+                repo.push()
 
             with (
-                repo.create_branch(branch_name,
-                                   repo.current_branch).with_branch(
-                    branch_name) as r
+                repo\
+                    .create_branch(branch_name, repo.current_branch)\
+                    .with_branch(branch_name)
+                as r
             ):
                 for charm in charms:
-                    self._cut_charm_branch(r, charm, juju_tf_version)
+                    self._cut_charm_branch(r, charm, juju_tf_version, dry_run)
 
                 # Open Update branch
-                r.create_pull_request(release_branch, title=title,
-                                      body=f"Cutting new release for branch {release_branch}")
+                if not dry_run:
+                    r.create_pull_request(release_branch, title=title,
+                                          body=f"Cutting new release for branch {release_branch}")
+
+    def canon_run(
+            self,
+            wrapper_func: Callable[[Client,list[LocalCharmRepo],bool],...],
+            branch_name: str,
+            title: str,
+            body: str,
+            dry_run: bool = False
+    ):
+        for repo, charms in self.repos:
+            current_branch = repo.current_branch
+
+            with (
+                repo \
+                        .create_branch(branch_name, repo.current_branch) \
+                        .with_branch(branch_name)
+                as r
+            ):
+                wrapper_func(r, charms, dry_run)
+
+                if not dry_run:
+                    r.create_pull_request(
+                        current_branch,
+                        title=title,
+                        body=body
+                    )
 
     def summary_pull_request(self, branch_name: str):
         from collections import Counter
@@ -141,22 +186,24 @@ class KubeflowCI(WithLogging):
 
     def summary_images(self):
         table = PrettyTable()
-        table.field_names = ["repo", "docs", "image", "current_tag", "last_tag"]
+        table.field_names = ["repo", "charm", "docs", "image", "current_tag", "last_tag"]
 
-        for charm in parse_repos_from_path(self.base_path):
-            ref = ImageReference.parse(charm.metadata.resources["oci-image"])
+        for repo, charms in self.repos:
+            for charm in charms:
+                ref = ImageReference.parse(charm.metadata.resources["oci-image"])
 
-            current_tag = ref.tag
-            last_tag = sorted(get_tags(ref), key=lambda tag: tag.last_update)[
-                -1]
+                current_tag = ref.tag
+                last_tag = sorted(get_tags(ref), key=lambda tag: tag.last_update)[
+                    -1]
 
-            table.add_row([
-                charm.name,
-                charm.metadata.docs or "",
-                f"{ref.namespace}/{ref.name}",
-                current_tag,
-                last_tag.name
-            ])
+                table.add_row([
+                    repo._git_repo.remote().url,
+                    charm.name,
+                    charm.metadata.docs or "",
+                    f"{ref.namespace}/{ref.name}",
+                    current_tag,
+                    last_tag.name
+                ])
 
         print(table)
 

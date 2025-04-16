@@ -1,19 +1,19 @@
 import re
-import hcl2
-
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterator
+
+import hcl2
 from git import Repo
 
-from typing import Iterator
-from kfcicli.terraform import get_juju_applications_names
-from kfcicli.metadata import get as get_metadata, Metadata
-
 from kfcicli.metadata import InputError
-from pathlib import Path
+from kfcicli.metadata import get as get_metadata, Metadata
+from kfcicli.terraform import get_juju_applications_names
 
 METADATA = "metadata.yaml"
 TERRAFORM_MAIN = "main.tf"
 TERRAFORM_DIR = "terraform"
+
 
 @dataclass
 class CharmRepo:
@@ -21,6 +21,7 @@ class CharmRepo:
     url: str
     tf_module: Path
     branch: str
+
 
 @dataclass
 class LocalCharmRepo(CharmRepo):
@@ -36,8 +37,8 @@ class LocalCharmRepo(CharmRepo):
             metadata=metadata
         )
 
-def parse_repos_from_module(filename: Path) -> list[CharmRepo]:
 
+def parse_repos_from_module(filename: Path) -> list[CharmRepo]:
     with open(filename, 'r') as file:
         out = hcl2.load(file)
 
@@ -56,28 +57,36 @@ def parse_repos_from_module(filename: Path) -> list[CharmRepo]:
     ]
 
 
-def parse_repos_from_path(path: Path) -> Iterator[LocalCharmRepo]:
+EXCLUDE_DIRS = ["tests"]
 
+
+def parse_repos_from_path(path: Path, exclude: list[str] = EXCLUDE_DIRS) -> \
+Iterator[LocalCharmRepo]:
     for folder in path.iterdir():
         repo = Repo(str(folder))
 
-        for dirpath, dirnames, filenames in folder.walk():
+        for dirpath, dirnames, filenames in folder.walk(top_down=True):
             dirpath: Path
+            dirnames[:] = [d for d in dirnames if d not in exclude]
+
             if METADATA in filenames:
                 metadata = get_metadata(dirpath)
 
                 if not (dirpath / TERRAFORM_DIR).exists():
-                    raise InputError(f"terraform module does not exist in {dirpath}")
+                    raise InputError(
+                        f"terraform module does not exist in {dirpath}")
 
-                apps =  list(get_juju_applications_names(dirpath / TERRAFORM_DIR / TERRAFORM_MAIN))
+                apps = list(get_juju_applications_names(
+                    dirpath / TERRAFORM_DIR / TERRAFORM_MAIN))
 
-                if len(apps)>1:
-                    raise InputError(f"too many applications in folder {dirpath}")
+                if len(apps) > 1:
+                    raise InputError(
+                        f"too many applications in folder {dirpath}")
 
                 yield LocalCharmRepo(
                     name=apps[0],
                     url=repo.remote().url,
-                    tf_module=dirpath.relative_to(folder),
+                    tf_module=(dirpath / TERRAFORM_DIR).relative_to(folder),
                     branch=repo.active_branch.name,
                     metadata=metadata
                 )

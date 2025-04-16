@@ -106,10 +106,13 @@ class KubeflowCI(WithLogging):
             branch_name: str,
             title: str,
             juju_tf_version: str | None = None,
-            dry_run: bool = False
+            dry_run: bool = False,
+            limit: int | None = None
     ):
 
-        for repo, charms in self.repos:
+        for repo, charms in self.repos[:limit]:
+
+            self.logger.info(f"Cutting branch for repo {repo.base_path}")
 
             release_branch = charms[0].branch
 
@@ -135,7 +138,8 @@ class KubeflowCI(WithLogging):
                     self._cut_charm_branch(r, charm, juju_tf_version, dry_run)
 
                 # Open Update branch
-                if not dry_run:
+                if not dry_run and not r.get_pull_request(branch_name):
+                    self.logger.debug(f"Opening PR for branch {branch_name} with base {release_branch}")
                     r.create_pull_request(release_branch, title=title,
                                           body=f"Cutting new release for branch {release_branch}")
 
@@ -158,7 +162,7 @@ class KubeflowCI(WithLogging):
             ):
                 wrapper_func(r, charms, dry_run)
 
-                if not dry_run:
+                if not dry_run and not r.get_pull_request(branch_name):
                     r.create_pull_request(
                         current_branch,
                         title=title,

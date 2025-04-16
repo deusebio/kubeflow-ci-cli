@@ -36,11 +36,11 @@ def set_variable_field(
     with open(filename, 'w') as file:
         file.write(hcl2.writes(example_ast))
 
-    fix_formatting(filename.parent)
-
     subprocess.check_output([
         "sed", '-i', '/type/ s/\"number\"/number/g', str(filename)
     ])
+
+    fix_formatting(filename.parent)
 
 
 def set_version_field(
@@ -77,11 +77,11 @@ def set_version_field(
     with open(filename, 'w') as file:
         file.write(hcl2.writes(example_ast))
 
-    fix_formatting(filename.parent)
-
     subprocess.check_output([
         "sed", '-i', '/required_providers/ s/=//g', str(filename)
     ])
+
+    fix_formatting(filename.parent)
 
 
 def fix_formatting(base_dir: Path):

@@ -1,5 +1,8 @@
 from kfcicli.main import *
+from kfcicli.utils import setup_logging
 import json
+
+setup_logging(log_level="INFO")
 
 with open("credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
@@ -23,7 +26,7 @@ client.cut_release(
     "kf-7254-release-1.10",
     title="[KF-7254] Release 1.10",
     juju_tf_version=">= 0.14.0",
-    dry_run=True
+    dry_run=False, limit=1
 )
 
 

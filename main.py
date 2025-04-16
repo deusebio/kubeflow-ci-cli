@@ -54,10 +54,11 @@ def update_tf_provider(juju_tf_version):
                 filename=repo.base_path / charm.tf_module / "versions.tf"
             )
 
-            repo.update_branch(
-                commit_msg=f"updating tracks for charm {charm.name}", directory=".",
-                push=not dry_run, force=True
-            )
+            if repo.is_dirty():
+                repo.update_branch(
+                    commit_msg=f"updating tracks for charm {charm.name}", directory=".",
+                    push=not dry_run, force=True
+                )
 
     return wrapper
 

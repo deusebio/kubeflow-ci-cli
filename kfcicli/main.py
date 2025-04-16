@@ -95,10 +95,11 @@ class KubeflowCI(WithLogging):
                 filename=repo.base_path / charm.tf_module / "versions.tf"
             )
 
-        repo.update_branch(
-            commit_msg=f"updating tracks for charm {charm.name}", directory=".",
-            push=not dry_run, force=True
-        )
+        if repo.is_dirty():
+            repo.update_branch(
+                commit_msg=f"updating tracks for charm {charm.name}", directory=".",
+                push=not dry_run, force=True
+            )
 
     def cut_release(
             self,
@@ -274,9 +275,10 @@ class KubeflowCI(WithLogging):
                         self._replace(local_charm_repo.metadata.file,
                                       image_name,
                                       image_name.replace(current_tag, last_tag))
-                        r.update_branch(
-                            f"updating tag for charm {charm.name} to {last_tag}",
-                            charm.tf_module.parent,
-                        )
+                        if r.is_dirty():
+                            r.update_branch(
+                                f"updating tag for charm {charm.name} to {last_tag}",
+                                charm.tf_module.parent,
+                            )
 
                 r.create_pull_request(current_branch, title=title)

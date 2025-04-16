@@ -128,6 +128,8 @@ class KubeflowCI(WithLogging):
             if not dry_run:
                 repo.push()
 
+            hash = repo.current_commit
+
             with (
                 repo\
                     .create_branch(branch_name, repo.current_branch)\
@@ -138,7 +140,9 @@ class KubeflowCI(WithLogging):
                     self._cut_charm_branch(r, charm, juju_tf_version, dry_run)
 
                 # Open Update branch
-                if not dry_run and not r.get_pull_request(branch_name):
+                if (
+                    not dry_run and not r.get_pull_request(branch_name) and r.current_commit != hash
+                ):
                     self.logger.debug(f"Opening PR for branch {branch_name} with base {release_branch}")
                     r.create_pull_request(release_branch, title=title,
                                           body=f"Cutting new release for branch {release_branch}")
@@ -153,6 +157,7 @@ class KubeflowCI(WithLogging):
     ):
         for repo, charms in self.repos:
             current_branch = repo.current_branch
+            hash = repo.current_commit
 
             with (
                 repo \
@@ -162,7 +167,9 @@ class KubeflowCI(WithLogging):
             ):
                 wrapper_func(r, charms, dry_run)
 
-                if not dry_run and not r.get_pull_request(branch_name):
+                if (
+                    not dry_run and not r.get_pull_request(branch_name) and r.current_commit != hash
+                ):
                     r.create_pull_request(
                         current_branch,
                         title=title,
@@ -177,6 +184,8 @@ class KubeflowCI(WithLogging):
 
         for repo, _ in self.repos:
             pr = repo.get_pull_request(branch_name)
+            if pr is None:
+                continue
 
             last_commit = pr.get_commits().reversed[0]
 

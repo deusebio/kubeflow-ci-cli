@@ -26,7 +26,7 @@ client.cut_release(
     "kf-7254-release-1.10",
     title="[KF-7254] Release 1.10",
     juju_tf_version=">= 0.14.0",
-    dry_run=False, limit=1
+    dry_run=False
 )
 
 
@@ -36,8 +36,8 @@ client.cut_release(
 
 modules = [
     Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
-    # Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
-    # Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
+    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
+    Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
 ]
 
 client = KubeflowCI(

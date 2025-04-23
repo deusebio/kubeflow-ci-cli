@@ -72,8 +72,11 @@ This will open on each repository a PR against the release branch just created w
 
 2. Provide a summary of all pull-requested tracking a given branch:
 ```python
-client.summary_pull_request("kf-xxxx-release-yyyyy")
+pr = client.pull_request("kf-xxxx-release-yyyyy")
 ```
+
+The `pr` object exposes a few methods to either show a summary of the PRs (e.g. as pandas Dataframe with `.df` or simple table with `.table`), or also 
+allow automatic merging using `.merge()`.
 
 3. Provide a summary of all images used in the various charms, and provide information about the latest tag present in the linked container registry
 ```python

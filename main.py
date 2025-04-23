@@ -1,3 +1,5 @@
+import logging
+
 from kfcicli.main import *
 from kfcicli.utils import setup_logging
 import json
@@ -9,6 +11,7 @@ with open("credentials.json", "r") as fid:
 
 
 tmp_folder = "/home/deusebio/tmp/kfcicli"
+# tmp_folder = "/home/deusebio/tmp/test"
 
 modules = [
     Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
@@ -28,7 +31,6 @@ client.cut_release(
     juju_tf_version=">= 0.14.0",
     dry_run=False
 )
-
 
 
 #####
@@ -76,7 +78,6 @@ def update_tf_provider(juju_tf_version):
 
     return wrapper
 
-
 client.canon_run(
     wrapper_func=update_tf_provider(">= 0.14.0"),
     branch_name="kf-7255-update-tf-provider",
@@ -84,6 +85,39 @@ client.canon_run(
     body="Updating juju provider requirement to >=0.14.0",
     dry_run=False
 )
+
+
+
+
+
+def update_channel(channel: str):
+    def wrapper(repo: Client, charms: list[LocalCharmRepo], dry_run: bool):
+        from kfcicli.terraform import set_variable_field
+
+        for charm in charms:
+            set_variable_field(
+                "channel", "default",
+                channel,
+                filename=repo.base_path / charm.tf_module / "variables.tf"
+            )
+
+            if repo.is_dirty():
+                repo.update_branch(
+                    commit_msg=f"pin channel to latest/edge for charm {charm.name}", directory=".",
+                    push=not dry_run, force=True
+                )
+
+    return wrapper
+
+client.canon_run(
+    wrapper_func=update_channel("latest/edge"),
+    branch_name="kf-7268-pin-channel-edge",
+    title="[KF-7268] chore: pin channel to latest/edge",
+    body="Pin channel to latest/edge",
+    dry_run=False
+)
+
+
 
 
 

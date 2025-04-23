@@ -176,27 +176,14 @@ class KubeflowCI(WithLogging):
                         body=body
                     )
 
-    def summary_pull_request(self, branch_name: str):
-        from collections import Counter
+    def pull_request(self, branch_name: str):
+        from kfcicli.kubeflow import PullRequests
 
-        table = PrettyTable()
-        table.field_names = ["repo", "pr", "success", "failure", "skipped"]
-
-        for repo, _ in self.repos:
-            pr = repo.get_pull_request(branch_name)
-            if pr is None:
-                continue
-
-            last_commit = pr.get_commits().reversed[0]
-
-            cnt = Counter(
-                [check.conclusion for check in last_commit.get_check_runs()])
-
-            table.add_row([repo._git_repo.remote().url, pr.html_url,
-                           cnt.get("success", 0), cnt.get("failure", 0),
-                           cnt.get("skipped", 0)])
-
-        print(table)
+        return PullRequests({
+            repo._git_repo.remote().url: pr
+            for repo, _ in self.repos
+            if (pr := repo.get_pull_request(branch_name))
+        })
 
     def summary_images(self):
         table = PrettyTable()

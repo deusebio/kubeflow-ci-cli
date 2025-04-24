@@ -1,9 +1,11 @@
+import logging
 import re
 from functools import reduce
 from itertools import groupby
 from pathlib import Path
 from re import Pattern
 
+import yaml
 from prettytable import PrettyTable
 
 from kfcicli.charms import CharmRepo, LocalCharmRepo
@@ -14,23 +16,35 @@ from kfcicli.repository import Client, create_repository_client_from_url, \
     GitCredentials
 from kfcicli.utils import WithLogging, safe
 from typing import Callable
+from kfcicli.kubeflow import KubeflowRepo
 
 BLACK_LIST = ["https://github.com/canonical/mysql-k8s-operator"]
 
+module_logger = logging.getLogger(__name__)
 
 class KubeflowCI(WithLogging):
 
     def __init__(
-        self, modules: list[Path], base_path: Path, credentials: GitCredentials
+        self, repos: list[KubeflowRepo], base_path: Path, credentials: GitCredentials
     ):
-        self.modules = modules
+        self.repos = repos
         self.base_path = base_path
         self.credentials = credentials
 
-        self.repos = list(self.iter_repos())
 
-    def iter_charms(self):
-        for filename in self.modules:
+    def to_dict(self):
+        return [
+            repo.to_dict()
+            for repo in self.repos
+        ]
+
+    def dump(self, filename: Path | str):
+        with open(filename, "w") as fid:
+            yaml.dump(self.to_dict(), fid)
+
+    @staticmethod
+    def iter_charms(modules: list[Path]):
+        for filename in modules:
             for charm in parse_repos_from_module(filename):
 
                 if charm.name == "istio_ingressgateway":
@@ -39,20 +53,27 @@ class KubeflowCI(WithLogging):
                 if charm.url not in BLACK_LIST:
                     yield charm
 
-    def iter_repos(self):
+    @classmethod
+    def from_dict(cls, data: list[dict], base_path: Path, credentials: GitCredentials):
 
-        for url, group in groupby(self.iter_charms(), lambda x: x.url):
-            charms = list(group)
+        repos = []
 
-            branches = {charm.branch for charm in charms}
-            # Verify consistency of branches
-            assert len(branches) == 1
+        for item in data:
+
+            url = item["url"]
+            branch = item["branch"]
 
             repo = create_repository_client_from_url(
-                self.credentials, url, base_path=self.base_path
+                credentials, url, base_path=base_path
             )
 
-            branch = branches.pop()
+            charms = [CharmRepo(
+                name = charm_data["name"],
+                url = url,
+                tf_module = Path(charm_data["path"]) / "terraform",
+                branch = branch
+            ) for charm_data in item["charms"]]
+
 
             if any([
                 branch in remote_branches
@@ -60,7 +81,7 @@ class KubeflowCI(WithLogging):
             ]):
                 repo.switch(branch)
             else:
-                self.logger.warning(f"Missing selected branch {branch} in remote of repository {url}")
+                module_logger.warning(f"Missing selected branch {branch} in remote of repository {url}")
 
             # Build LocalCharmRepo and skipping repositories that don't have charms
             charms = [
@@ -74,8 +95,57 @@ class KubeflowCI(WithLogging):
             if len(charms)==0:
                 continue
 
-            yield repo, charms
+            repos.append(KubeflowRepo(repo, charms))
 
+        return KubeflowCI(repos, base_path, credentials)
+
+    @classmethod
+    def read(cls, filename: Path | str, base_path: Path, credentials: GitCredentials):
+        with open(filename, "r") as fid:
+            data = yaml.safe_load(fid)
+        return cls.from_dict(data, base_path, credentials)
+
+    @classmethod
+    def from_tf_modules(cls, modules: list[Path], base_path: Path, credentials: GitCredentials):
+
+        repos = []
+
+        for url, group in groupby(cls.iter_charms(modules), lambda x: x.url):
+            charms = list(group)
+
+            branches = {charm.branch for charm in charms}
+            # Verify consistency of branches
+            assert len(branches) == 1
+
+            repo = create_repository_client_from_url(
+                credentials, url, base_path=base_path
+            )
+
+            branch = branches.pop()
+
+            if any([
+                branch in remote_branches
+                for remote_branches in repo.remote_branches.values()
+            ]):
+                repo.switch(branch)
+            else:
+                module_logger.warning(f"Missing selected branch {branch} in remote of repository {url}")
+
+            # Build LocalCharmRepo and skipping repositories that don't have charms
+            charms = [
+                local_charm
+                for charm in charms
+                if (local_charm := safe(
+                    lambda : LocalCharmRepo.from_charm_repo(charm, get_metadata(repo.base_path / charm.tf_module.parent))
+                )())
+            ]
+
+            if len(charms)==0:
+                continue
+
+            repos.append(KubeflowRepo(repo, charms))
+
+        return KubeflowCI(repos, base_path, credentials)
 
     @staticmethod
     def _cut_charm_branch(repo: Client, charm: CharmRepo,

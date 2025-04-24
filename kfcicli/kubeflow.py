@@ -4,6 +4,30 @@ from prettytable import PrettyTable
 import pandas as pd
 from kfcicli.utils import WithLogging
 
+from kfcicli.repository import Client
+from kfcicli.charms import LocalCharmRepo
+from dataclasses import dataclass
+
+@dataclass
+class KubeflowRepo:
+    repository: Client
+    charms: list[LocalCharmRepo]
+
+    def to_dict(self):
+
+        branches = {charm.branch for charm in self.charms}
+        # Verify consistency of branches
+        assert len(branches) == 1
+
+        return {
+            "url": self.repository._git_repo.remote().url,
+            "branch": list(branches)[0],
+            "charms": [
+                {"path": str(charm.tf_module.parent), "name": charm.name}
+                for charm in self.charms
+            ]
+        }
+
 class PullRequests(WithLogging):
     FIELD_NAMES = ["pr", "success", "failure", "skipped", "approvals",
                    "can_be_merged"]

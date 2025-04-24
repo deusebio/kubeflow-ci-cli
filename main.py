@@ -1,4 +1,5 @@
 import logging
+from fileinput import filename
 
 from kfcicli.main import *
 from kfcicli.utils import setup_logging
@@ -10,20 +11,31 @@ with open("credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
 
-tmp_folder = "/home/deusebio/tmp/kfcicli"
-# tmp_folder = "/home/deusebio/tmp/test"
+# tmp_folder = "/home/deusebio/tmp/kfcicli"
+tmp_folder = "/home/deusebio/tmp/test"
 
 modules = [
     Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
-    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
-    Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
+#    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
+#    Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
 ]
 
-client = KubeflowCI(
+client = KubeflowCI.from_tf_modules(
     modules=modules,
     base_path=Path(f"{tmp_folder}/charm_repos"),
     credentials=credentials
 )
+
+filename = Path("presets/test.yaml")
+
+data = client.dump(filename)   #to_dict()
+
+client2 = KubeflowCI.read(filename, Path(f"{tmp_folder}/charm_repos"), credentials)
+
+client2 = KubeflowCI.from_dict(
+    data, base_path=Path(f"{tmp_folder}/charm_repos"), credentials=credentials
+)
+
 
 client.cut_release(
     "kf-7254-release-1.10",
@@ -120,7 +132,37 @@ client.canon_run(
 
 
 
+def update_tox(channel: str):
+    def wrapper(repo: Client, charms: list[LocalCharmRepo], dry_run: bool):
+        for charm in charms:
+            import configparser
+            config = configparser.ConfigParser()
 
+            if not (filename := charm.metadata.file.parent / "tox.ini").exists():
+                continue
+
+            config.read(filename)
+
+            if (
+                not "testenv:unit" in config.sections() or
+                "coverage xml" not in config["testenv:unit"]["commands"]
+            ):
+                continue
+
+            config["testenv:unit"]["commands"] += "\ncoverage xml"
+
+            with open(filename,'w') as configfile:
+                config.write(configfile)
+
+        import requests
+        import yaml
+        url = "https://raw.githubusercontent.com/canonical/mongodb-operator/refs/heads/6/edge/.github/workflows/tics_run_sh_ghaction_test.yml"
+        if not (response := requests.get(url)) or (response.status_code != 200):
+            logging.warning(f"Bundle file {url} could not be downloaded")
+
+        workflow = yaml.safe_load(response.content.decode("utf-8"))
+
+        workflow["jobs"]["build"]["steps"][-1]["with"]["project"] = repo.base_path.name
 
 
 # client.summary_pull_request("wip-test")

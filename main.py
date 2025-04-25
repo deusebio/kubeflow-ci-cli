@@ -10,9 +10,7 @@ setup_logging(log_level="INFO")
 with open("credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
-
 tmp_folder = "/home/deusebio/tmp/kfcicli"
-# tmp_folder = "/home/deusebio/tmp/test"
 
 modules = [
     Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
@@ -26,12 +24,7 @@ client = KubeflowCI.from_tf_modules(
     credentials=credentials
 )
 
-filename = Path("presets/kubeflow-repos.yaml")
-
-client.dump(filename)   #to_dict()
-
-
-
+client.dump("presets/release-1.10.yaml")
 
 ####
 
@@ -41,7 +34,6 @@ client.cut_release(
     juju_tf_version=">= 0.14.0",
     dry_run=False
 )
-
 
 #####
 
@@ -121,6 +113,8 @@ client.canon_run(
     body="Pin channel to latest/edge",
     dry_run=False
 )
+
+
 
 
 

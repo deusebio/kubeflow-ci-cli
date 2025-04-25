@@ -11,13 +11,13 @@ with open("credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
 
-# tmp_folder = "/home/deusebio/tmp/kfcicli"
-tmp_folder = "/home/deusebio/tmp/test"
+tmp_folder = "/home/deusebio/tmp/kfcicli"
+# tmp_folder = "/home/deusebio/tmp/test"
 
 modules = [
     Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
-#    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
-#    Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
+   Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
+   Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
 ]
 
 client = KubeflowCI.from_tf_modules(
@@ -26,16 +26,14 @@ client = KubeflowCI.from_tf_modules(
     credentials=credentials
 )
 
-filename = Path("presets/test.yaml")
+filename = Path("presets/kubeflow-repos.yaml")
 
-data = client.dump(filename)   #to_dict()
+client.dump(filename)   #to_dict()
 
-client2 = KubeflowCI.read(filename, Path(f"{tmp_folder}/charm_repos"), credentials)
 
-client2 = KubeflowCI.from_dict(
-    data, base_path=Path(f"{tmp_folder}/charm_repos"), credentials=credentials
-)
 
+
+####
 
 client.cut_release(
     "kf-7254-release-1.10",
@@ -56,17 +54,12 @@ setup_logging(log_level="INFO")
 with open("credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
-
 tmp_folder = "/home/deusebio/tmp/kfcicli"
 
-modules = [
-    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
-    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
-    Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
-]
+filename=Path("./presets/kubeflow-repos.yaml")
 
-client = KubeflowCI(
-    modules=modules,
+client = KubeflowCI.read(
+    filename=filename,
     base_path=Path(f"{tmp_folder}/charm_repos"),
     credentials=credentials
 )

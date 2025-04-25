@@ -180,7 +180,9 @@ class KubeflowCI(WithLogging):
             limit: int | None = None
     ):
 
-        for repo, charms in self.repos[:limit]:
+        for kubeflow_repo in self.repos[:limit]:
+
+            repo, charms = kubeflow_repo.repository, kubeflow_repo.charms
 
             self.logger.info(f"Cutting branch for repo {repo.base_path}")
 
@@ -225,7 +227,10 @@ class KubeflowCI(WithLogging):
             body: str,
             dry_run: bool = False
     ):
-        for repo, charms in self.repos:
+        for kubeflow_repo in self.repos:
+
+            repo, charms = kubeflow_repo.repository, kubeflow_repo.charms
+
             current_branch = repo.current_branch
             hash = repo.current_commit
 
@@ -250,16 +255,17 @@ class KubeflowCI(WithLogging):
         from kfcicli.kubeflow import PullRequests
 
         return PullRequests({
-            repo._git_repo.remote().url: pr
-            for repo, _ in self.repos
-            if (pr := repo.get_pull_request(branch_name))
+            kubeflow_repo.repository._git_repo.remote().url: pr
+            for kubeflow_repo in self.repos
+            if (pr := kubeflow_repo.repository.get_pull_request(branch_name))
         })
 
     def summary_images(self):
         table = PrettyTable()
         table.field_names = ["repo", "charm", "docs", "image", "current_tag", "last_tag"]
 
-        for repo, charms in self.repos:
+        for kubeflow_repo in self.repos:
+            repo, charms = kubeflow_repo.repository, kubeflow_repo.charms
             for charm in charms:
                 ref = ImageReference.parse(charm.metadata.resources["oci-image"])
 
@@ -296,7 +302,9 @@ class KubeflowCI(WithLogging):
             tag_regex: Pattern | None = None
     ):
 
-        for repo, charms in self.repos:
+        for kubeflow_repo in self.repos:
+
+            repo, charms = kubeflow_repo.repository, kubeflow_repo.charms
 
             current_branch = repo.current_branch
 

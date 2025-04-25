@@ -1,23 +1,21 @@
 import logging
 
-from kfcicli.main import *
+from pathlib import Path
+from kfcicli.main import GitCredentials, KubeflowCI, Client
+from kfcicli.charms import LocalCharmRepo
 from kfcicli.utils import setup_logging
 import json
 import configparser
 import jinja2
 
-setup_logging(log_level="INFO")
-
-with open("credentials.json", "r") as fid:
-    credentials = GitCredentials(**json.loads(fid.read()))
-
-# tmp_folder = "/home/deusebio/tmp/kfcicli"
-base_path = Path("/home/deusebio/tmp/test/charm_repos")
-repository_file = Path("presets/test.main.yaml")
-
-client = KubeflowCI.read(repository_file, base_path, credentials)
-
 def reformat_tox(filename: Path):
+    """Import and export a tox file to get the formatting right.
+
+    This is a function with side-effects, that modify the underlying file.
+
+    Args:
+        filename: Path, name of the file to be re-formatted
+    """
     config = configparser.ConfigParser()
 
     config.read(filename)
@@ -26,6 +24,16 @@ def reformat_tox(filename: Path):
 
 
 def add_coverage(filename: Path) -> bool:
+    """Adding the coverage XML report when running the tox unit env.
+
+    This is a function with side-effects, that modify the underlying file.
+
+    Args:
+        filename: Path, name of the tox.ini file to be amended
+
+    Returns:
+        true if the file was modified, false if it didn't have the unit env.
+    """
 
     config = configparser.ConfigParser()
 
@@ -44,7 +52,16 @@ def add_coverage(filename: Path) -> bool:
 
     return True
 
-def _single_repo_tics(repo_name, filename: Path):
+def _single_repo_tics(repo_name: str, filename: Path):
+    """Create TIOBE scan workflow for a single charm repository.
+
+    This is a function with side-effects, that creates or overwrites the underlying file.
+
+    Args:
+        repo_name: str, name of the repository / project to be used in TIOBE
+        filename: Path, name of the Github Action file
+    """
+
     template = Path("./scripts/kf7281/tics-single-repo.yaml.j2")
 
     env = jinja2.Environment()
@@ -58,7 +75,16 @@ def _single_repo_tics(repo_name, filename: Path):
         ))
 
 
-def _multi_repo_tics(repo_name, charms: list[LocalCharmRepo], filename: Path):
+def _multi_repo_tics(repo_name: str, charms: list[LocalCharmRepo], filename: Path):
+    """Create TIOBE scan workflow for a multi charm repository.
+
+    This is a function with side-effects, that creates or overwrites the underlying file.
+
+    Args:
+        repo_name: str, name of the repository / project to be used in TIOBE
+        charms: list[kfcicli.charms.LocalCharmRepo], list of charms to be included in tiobe scanning
+        filename: Path, name of the Github Action file
+    """
     template = Path("./scripts/kf7281/tics-multi-repo.yaml.j2")
 
     env = jinja2.Environment()
@@ -79,6 +105,15 @@ def _multi_repo_tics(repo_name, charms: list[LocalCharmRepo], filename: Path):
 
 
 def create_tics_file(repo: Client, charms: list[LocalCharmRepo]):
+    """Create TIOBE scan workflow for a repository (either single-charm or multi-charm).
+
+    This is a function with side-effects, that creates or overwrites the underlying file.
+
+    Args:
+        repo: kfcicli.repository.Client, client instance representing the repository
+        charms: list[kfcicli.charms.LocalCharmRepo], list of charms in the repository
+    """
+
     filename = repo.base_path / ".github" / "workflows" / "tiobe_scan.yml"
     if len(charms)==1:
         _single_repo_tics(repo.base_path.name, filename)
@@ -87,6 +122,10 @@ def create_tics_file(repo: Client, charms: list[LocalCharmRepo]):
 
 
 def main(repo: Client, charms: list[LocalCharmRepo], dry_run: bool):
+    """Canon-run main function.
+
+    Signature must comply with the requirements of kfcicli.main.KubeflowCI.canon_run
+    """
 
     charms_with_unit = []
 
@@ -127,11 +166,23 @@ Updating with TIOBE scan, including:
 * creating tiobe_scan.yaml file
 """
 
-client.canon_run(
-    wrapper_func=main,
-    branch_name="kf-7281-implementing-tics",
-    title="[KF-7281] Enabling TIOBE scan",
-    body=PR_BODY,
-    dry_run=False
-)
+if __name__ == "__main__":
+    setup_logging(log_level="INFO")
+
+    with open("credentials.json", "r") as fid:
+        credentials = GitCredentials(**json.loads(fid.read()))
+
+    # tmp_folder = "/home/deusebio/tmp/kfcicli"
+    base_path = Path("/home/deusebio/tmp/test/charm_repos")
+    repository_file = Path("presets/test.main.yaml")
+
+    client = KubeflowCI.read(repository_file, base_path, credentials)
+
+    client.canon_run(
+        wrapper_func=main,
+        branch_name="kf-7281-implementing-tics",
+        title="[KF-7281] Enabling TIOBE scan",
+        body=PR_BODY,
+        dry_run=False
+    )
 

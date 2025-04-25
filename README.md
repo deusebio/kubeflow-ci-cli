@@ -42,21 +42,30 @@ client = KubeflowCI(
 At this point you have your environment setup. You can start by retrieving all repositories:
 
 ```python
-repos = list(client.iter_repos())
+client.repos
 ```
 
-The `repos` variable has two parts:
+The `repos` variable is a list of `kfciclie.kubeflow.KubeflowRepo` that has two parts:
 
 ```python
-repos = [
-    (<kfcicli.repository.Client>, [<kfcicli.repository.CharmRepo>]
-]
+KubeflowRepo(<kfcicli.repository.Client>, [<kfcicli.repository.CharmRepo>]
 ```
 
 with 
 * `Client` being the abstraction to interact with the Git repo and its linked Github repository, 
 * `CharmRepo` being a reference to a particular charm within a Git repository. There exists two classes: `CharmRepo` and `LocalCharmRepo`. `CharmRepo` is the one parsed out from the Terraform module, whereas `LocalCharmRepo` also provides reference to the path where the charm is found and also bindings to metadata information (e.g. name, images, etc).
 
+You can also dump the list of `KubeflowRepo` representation into a YAML file with 
+
+```python
+client.dump("my-file.yaml")
+```
+
+To be used to re-read the data into a `KubeflowCI` object
+
+```python
+client = KubeflowCI.dump("my-file.yaml")
+```
 
 Using the `client` object is possible to do multiple things (internally all the functions below uses that), like:
 

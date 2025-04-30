@@ -4,9 +4,8 @@ import os
 from pathlib import Path
 from kfcicli.main import GitCredentials, KubeflowCI, Client
 from kfcicli.charms import LocalCharmRepo
-from kfcicli.utils import setup_logging
+from kfcicli.utils import setup_logging, CommentConfigParser as ConfigParser
 import json
-import configparser
 import jinja2
 
 def reformat_tox(filename: Path):
@@ -17,7 +16,7 @@ def reformat_tox(filename: Path):
     Args:
         filename: Path, name of the file to be re-formatted
     """
-    config = configparser.ConfigParser()
+    config = ConfigParser()
 
     config.read(filename)
     with open(filename, 'w') as configfile:
@@ -36,7 +35,7 @@ def add_coverage(filename: Path) -> bool:
         true if the file was modified, false if it didn't have the unit env.
     """
 
-    config = configparser.ConfigParser()
+    config = ConfigParser()
 
     config.read(filename)
 

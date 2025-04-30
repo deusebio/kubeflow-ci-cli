@@ -46,9 +46,10 @@ setup_logging(log_level="INFO")
 with open("/home/deusebio/.kfcicli/credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
-tmp_folder = "/home/deusebio/tmp/kfcicli"
+tmp_folder = "/home/deusebio/.kfcicli"
 
-filename=Path("./presets/kubeflow-repos.yaml")
+# filename=Path("./presets/kubeflow-repos.yaml")
+filename=Path("./presets/dev.main.yaml")
 
 client = KubeflowCI.read(
     filename=filename,

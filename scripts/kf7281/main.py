@@ -1,4 +1,5 @@
 import logging
+import os
 
 from pathlib import Path
 from kfcicli.main import GitCredentials, KubeflowCI, Client
@@ -167,14 +168,33 @@ Updating with TIOBE scan, including:
 """
 
 if __name__ == "__main__":
-    setup_logging(log_level="INFO")
+    import argparse
 
-    with open("credentials.json", "r") as fid:
+    home_folder = os.getenv("HOME", "/home/ubuntu")
+
+    args_parser = argparse.ArgumentParser()
+    args_parser.add_argument(
+        "input", help="Input file to get the list of repos"
+    )
+    args_parser.add_argument(
+        "--log-level", required=False, default="INFO", help="log level to be used"
+    )
+    args_parser.add_argument(
+        "--base-path", required=False, default=f"{home_folder}/.kfcicli/", help="Base path where to store all repositories"
+    )
+    args_parser.add_argument(
+        "--credentials", required=False, default=f"{home_folder}/.kfcicli/credentials.json", help="File holding the credentials for Github"
+    )
+
+    args = args_parser.parse_args()
+
+    setup_logging(log_level=args.log_level)
+
+    with open(args.credentials, "r") as fid:
         credentials = GitCredentials(**json.loads(fid.read()))
 
-    # tmp_folder = "/home/deusebio/tmp/kfcicli"
-    base_path = Path("/home/deusebio/tmp/test/charm_repos")
-    repository_file = Path("presets/test.main.yaml")
+    base_path = Path(args.base_path)
+    repository_file = Path(args.input)
 
     client = KubeflowCI.read(repository_file, base_path, credentials)
 
@@ -185,4 +205,3 @@ if __name__ == "__main__":
         body=PR_BODY,
         dry_run=False
     )
-

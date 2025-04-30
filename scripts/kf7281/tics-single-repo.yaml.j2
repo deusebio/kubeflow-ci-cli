@@ -2,6 +2,8 @@ name: TICS run self-hosted test (github-action)
 
 on:
   workflow_dispatch: # Allows manual triggering
+  schedule:
+    - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
 
 jobs:
   build:
@@ -17,15 +19,17 @@ jobs:
           python-version: 3.8
 
       - name: Install dependencies
-        run: pip install tox
+        run: |
+          pip install tox
+          pip install pylint flake8
 
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
 
       - name: move results to necessary folder for TICS
         run: |
-          mkdir .cover
-          mv coverage.xml .cover/coverage.xml
+          mkdir cover
+          mv coverage.xml cover/coverage.xml
 
       - name: Run TICS analysis with github-action
         uses: tiobe/tics-github-action@v3

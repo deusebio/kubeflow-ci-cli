@@ -43,7 +43,7 @@ import json
 
 setup_logging(log_level="INFO")
 
-with open("credentials.json", "r") as fid:
+with open("/home/deusebio/.kfcicli/credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
 tmp_folder = "/home/deusebio/tmp/kfcicli"

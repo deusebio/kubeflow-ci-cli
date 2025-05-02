@@ -40,15 +40,15 @@ def add_coverage(filename: Path) -> bool:
     config.read(filename)
 
     if (
-            not "testenv:unit" in config.sections() or
-            "coverage xml" in config["testenv:unit"]["commands"]
+            not "testenv:unit" in config.sections()
     ):
         return False
 
-    config["testenv:unit"]["commands"] += "\ncoverage xml"
+    if "coverage xml" not in config["testenv:unit"]["commands"]:
+        config["testenv:unit"]["commands"] += "\ncoverage xml"
 
-    with open(filename, 'w') as configfile:
-        config.write(configfile)
+        with open(filename, 'w') as configfile:
+            config.write(configfile)
 
     return True
 
@@ -115,7 +115,11 @@ def create_tics_file(repo: Client, charms: list[LocalCharmRepo]):
     """
 
     filename = repo.base_path / ".github" / "workflows" / "tiobe_scan.yml"
-    if len(charms)==1:
+
+    # Checking if repo is single charm or multi charm
+    # Note that checking that there is only 1 charm is not enough, since there exists
+    # repositories with multi-charm structure but only one charm (e.g. argo-operators)
+    if len(charms)==1 and str(charms[0].tf_module) == "terraform":
         _single_repo_tics(repo.base_path.name, filename)
     else:
         _multi_repo_tics(repo.base_path.name, charms, filename)
@@ -133,6 +137,7 @@ def main(repo: Client, charms: list[LocalCharmRepo], dry_run: bool):
         if not (filename := charm.metadata.file.parent / "tox.ini").exists():
             continue
 
+        # reformatting tox.ini file to be machine-generated and handled
         reformat_tox(filename)
 
         if repo.is_dirty():
@@ -141,6 +146,7 @@ def main(repo: Client, charms: list[LocalCharmRepo], dry_run: bool):
                 push=not dry_run, force=True
             )
 
+        # coverage.xml generation when running unit tests
         unit_exists = add_coverage(filename)
         if unit_exists:
             charms_with_unit.append(charm)
@@ -151,12 +157,14 @@ def main(repo: Client, charms: list[LocalCharmRepo], dry_run: bool):
                 push=not dry_run, force=True
             )
 
+    # creating tiobe_scan.yaml file
     create_tics_file(repo, charms_with_unit)
 
-    repo.update_branch(
-        commit_msg=f"Adding TICS file", directory=".",
-        push=not dry_run, force=True
-    )
+    if repo.is_dirty():
+        repo.update_branch(
+            commit_msg=f"Adding TICS file", directory=".",
+            push=not dry_run, force=True
+        )
 
 
 PR_BODY="""
@@ -204,3 +212,4 @@ if __name__ == "__main__":
         body=PR_BODY,
         dry_run=False
     )
+

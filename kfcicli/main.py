@@ -5,6 +5,7 @@ from itertools import groupby
 from pathlib import Path
 from re import Pattern
 
+import git
 import yaml
 from prettytable import PrettyTable
 
@@ -79,7 +80,7 @@ class KubeflowCI(WithLogging):
                 branch in remote_branches
                 for remote_branches in repo.remote_branches.values()
             ]):
-                repo.switch(branch)
+                repo.switch(branch).pull()
             else:
                 module_logger.warning(f"Missing selected branch {branch} in remote of repository {url}")
 
@@ -234,22 +235,41 @@ class KubeflowCI(WithLogging):
             current_branch = repo.current_branch
             hash = repo.current_commit
 
-            with (
-                repo \
-                        .create_branch(branch_name, repo.current_branch) \
-                        .with_branch(branch_name)
-                as r
-            ):
+            all_remote_branches = set(reduce(
+                lambda x,y: x+y, repo.remote_branches.values(), []
+            ))
+
+            # Create branch if it does not exists
+            if not (branch_name in repo.branches or branch_name in all_remote_branches):
+                repo.create_branch(branch_name, repo.current_branch)
+            else:
+                try:
+                    repo.pull(branch_name, rebase=True)
+                except git.GitCommandError as e:
+                    self.logger.warning(f"Error when pulling branch: {e.stderr}")
+
+            with repo.with_branch(branch_name) as r:
                 wrapper_func(r, charms, dry_run)
 
-                if (
-                    not dry_run and not r.get_pull_request(branch_name) and r.current_commit != hash
-                ):
-                    r.create_pull_request(
-                        current_branch,
-                        title=title,
-                        body=body
-                    )
+                if r.current_commit == hash:
+                    self.logger.info(
+                        f"Skipping pull-request creation. Base: {hash} Current commit: {r.current_commit}")
+                    continue
+
+                if dry_run:
+                    self.logger.info(
+                        "Skipping pull-request creation in dry-run mode")
+                    continue
+
+                if pr := repo.get_pull_request(branch_name):
+                    self.logger.info(f"Skipping pull request creation. Pull request exists {pr.html_url}")
+                    continue
+
+                r.create_pull_request(
+                    current_branch,
+                    title=title,
+                    body=body
+                )
 
     def pull_request(self, branch_name: str):
         from kfcicli.kubeflow import PullRequests

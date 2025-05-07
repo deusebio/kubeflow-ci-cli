@@ -388,17 +388,19 @@ class Client:  # pylint: disable=too-many-public-methods
             raise RepositoryClientError(f"unknown error {exc}") from exc
         return (branch or self.current_branch) in branches_with_commit
 
-    def pull(self, branch_name: str | None = None) -> None:
+    def pull(self, branch_name: str | None = None, rebase: bool = False) -> None:
         """Pull content from remote for the provided branch.
 
         Args:
             branch_name: branch to be pulled from the remote
+            rebase: boolean to indicate whether to rebase local branch
         """
         if branch_name is None:
-            self._git_repo.git.pull()
+            extra_args = ["--rebase"] if rebase else []
+            self._git_repo.git.pull(*extra_args)
         else:
             with self.with_branch(branch_name) as repo:
-                repo.pull()
+                repo.pull(rebase=rebase)
 
     def push(self, branch_name: str | None = None, force: bool = False) -> None:
         """Pull content from remote for the provided branch.

@@ -35,7 +35,7 @@ from pathlib import Path
 
 client = KubeflowCI(
     modules=[Path(f"../charmed-kubeflow-solutions/modules/kubeflow/applications.tf")],
-    base_path=Path(f"tmp_folder"),
+    base_path=Path(f"{tmp_folder}"),
     credentials=credentials
 )
 ```

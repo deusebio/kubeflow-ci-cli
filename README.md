@@ -10,7 +10,7 @@ To use the package first put your Github credentials in a file
 # credentials.json
 {
     "username": <github user>
-    "password": <access_token>
+    "access_token": <access_token>
 }
 ```
 
@@ -19,11 +19,12 @@ Load the credentials into a `GitCredential` object, and pick a folder where to s
 ```python
 from kfcicli.main import *
 import json
+import os
 
 with open("credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
-tmp_folder = "/home/deusebio/tmp/kfcicli/charm_repos"
+tmp_folder = f"/home/os.getenv('HOME')/tmp/kfcicli/charm_repos"
 ```
 
 You can then instantiate a `KubeflowCI` object to manage your CI, by providing the modules to be used to retrieve charm informations, e.g. 
@@ -33,8 +34,8 @@ from kfcicli.main import KubeflowCI
 from pathlib import Path
 
 client = KubeflowCI(
-    modules=[Path(f"/../charmed-kubeflow-solutions/modules/kubeflow/applications.tf")],
-    base_path=Path({tmp_folder}),
+    modules=[Path(f"../charmed-kubeflow-solutions/modules/kubeflow/applications.tf")],
+    base_path=Path(f"{tmp_folder}"),
     credentials=credentials
 )
 ```
@@ -48,7 +49,7 @@ client.repos
 The `repos` variable is a list of `kfciclie.kubeflow.KubeflowRepo` that has two parts:
 
 ```python
-KubeflowRepo(<kfcicli.repository.Client>, [<kfcicli.repository.CharmRepo>]
+KubeflowRepo(<kfcicli.repository.Client>, [<kfcicli.repository.CharmRepo>])
 ```
 
 with 

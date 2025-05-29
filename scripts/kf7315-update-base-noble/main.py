@@ -26,7 +26,7 @@ client = KubeflowCI.read(
     credentials=credentials
 )
 
-CURRENT_FOLDER = Path("./scripts/kf7315")
+CURRENT_FOLDER = Path(__file__).parent
 
 def update_deps(script: Path, path: Path) -> bool:
 
@@ -132,7 +132,6 @@ def update_base(repo: Client, charms: list[LocalCharmRepo], dry_run: bool):
             push=not dry_run, force=True
         )
 
-
 client.canon_run(
     wrapper_func=update_base,
     branch_name="kf-7315-update-base",
@@ -140,4 +139,3 @@ client.canon_run(
     body="PR for updating bases to 24.04, and updating also python dependencies",
     dry_run=False
 )
-

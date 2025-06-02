@@ -138,11 +138,6 @@
   url: https://github.com/canonical/resource-dispatcher
 - branch: main
   charms:
-  - name: minio
-    path: .
-  url: https://github.com/canonical/minio-operator
-- branch: main
-  charms:
   - name: mlflow_server
     path: .
   url: https://github.com/canonical/mlflow-operator

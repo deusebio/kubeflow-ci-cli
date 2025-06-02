@@ -8,6 +8,8 @@ from kfcicli.utils import setup_logging, CommentConfigParser as ConfigParser
 import json
 import jinja2
 
+CURRENT_FOLDER = Path(__file__).parent
+
 def reformat_tox(filename: Path):
     """Import and export a tox file to get the formatting right.
 
@@ -62,7 +64,7 @@ def _single_repo_tics(repo_name: str, filename: Path):
         filename: Path, name of the Github Action file
     """
 
-    template = Path("./scripts/kf7281/tics-single-repo.yaml.j2")
+    template = CURRENT_FOLDER / "tics-single-repo.yaml.j2"
 
     env = jinja2.Environment()
     with open(template, "r") as fid:
@@ -85,7 +87,7 @@ def _multi_repo_tics(repo_name: str, charms: list[LocalCharmRepo], filename: Pat
         charms: list[kfcicli.charms.LocalCharmRepo], list of charms to be included in tiobe scanning
         filename: Path, name of the Github Action file
     """
-    template = Path("./scripts/kf7281/tics-multi-repo.yaml.j2")
+    template = CURRENT_FOLDER / "tics-single-repo.yaml.j2"
 
     env = jinja2.Environment()
     with open(template, "r") as fid:

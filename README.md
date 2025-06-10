@@ -33,7 +33,7 @@ You can then instantiate a `KubeflowCI` object to manage your CI, by providing t
 from kfcicli.main import KubeflowCI
 from pathlib import Path
 
-client = KubeflowCI(
+client = KubeflowCI.from_tf_modules(
     modules=[Path(f"../charmed-kubeflow-solutions/modules/kubeflow/applications.tf")],
     base_path=Path(f"{tmp_folder}"),
     credentials=credentials

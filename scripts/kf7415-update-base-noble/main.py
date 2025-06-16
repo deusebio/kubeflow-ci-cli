@@ -89,7 +89,7 @@ def remove_all_constraints_txt(base_path: Path):
 # Replace all references to use base 24.04            
 def replace_base_text(base_path: Path):
     for f in base_path.rglob("*"):
-        if f.is_file():
+        if f.is_file() and f.name != "charmcraft.yaml":
             try:
                 content = f.read_text()
             except UnicodeDecodeError:

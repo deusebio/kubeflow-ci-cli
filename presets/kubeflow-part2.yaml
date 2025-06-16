@@ -1,0 +1,79 @@
+- branch: main
+  charms:
+  - name: kubeflow_roles
+    path: .
+  url: https://github.com/canonical/kubeflow-roles-operator
+- branch: main
+  charms:
+  - name: tensorboard_controller
+    path: charms/tensorboard-controller
+  - name: tensorboards_web_app
+    path: charms/tensorboards-web-app
+  url: https://github.com/canonical/kubeflow-tensorboards-operator
+- branch: main
+  charms:
+  - name: kubeflow_volumes
+    path: .
+  url: https://github.com/canonical/kubeflow-volumes-operator
+- branch: main
+  charms:
+  - name: metacontroller_operator
+    path: .
+  url: https://github.com/canonical/metacontroller-operator
+- branch: main
+  charms:
+  - name: minio
+    path: .
+  url: https://github.com/canonical/minio-operator
+- branch: main
+  charms:
+  - name: mlflow_server
+    path: .
+  url: https://github.com/canonical/mlflow-operator
+- branch: main
+  charms:
+  - name: mlmd
+    path: .
+  url: https://github.com/canonical/mlmd-operator
+- branch: main
+  charms:
+  - name: mlops-libs
+    path: .
+  url: https://github.com/canonical/mlops-libs
+- branch: main
+  charms:
+  - name: namespace_node_affinity
+    path: .
+  url: https://github.com/canonical/namespace-node-affinity-operator
+- branch: main
+  charms:
+  - name: ngc_integrator_operator
+    path: .
+  url: https://github.com/canonical/ngc-integrator-operator
+- branch: main
+  charms:
+  - name: jupyter_controller
+    path: charms/jupyter-controller
+  - name: jupyter_ui
+    path: charms/jupyter-ui
+  url: https://github.com/canonical/notebook-operators
+- branch: main
+  charms:
+  - name: oidc_gatekeeper
+    path: .
+  url: https://github.com/canonical/oidc-gatekeeper-operator
+- branch: main
+  charms:
+  - name: pvcviewer_operator
+    path: .
+  url: https://github.com/canonical/pvcviewer-operator
+- branch: main
+  charms:
+  - name: resource_dispatcher
+    path: .
+  url: https://github.com/canonical/resource-dispatcher
+- branch: main
+  charms:
+  - name: training_operator
+    path: .
+  url: https://github.com/canonical/training-operator

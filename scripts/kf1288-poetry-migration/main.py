@@ -1,6 +1,5 @@
 from json import loads
-from os import makedirs, umask
-from os.path import abspath, dirname, join
+from os.path import abspath, dirname, exists, join
 from shutil import copy
 from sys import path as sys_path
 
@@ -25,35 +24,38 @@ PATH_FOR_REPOSITORY_LIST = Path("../../presets/kubeflow-repos.yaml")
 logger = setup_logging(log_level="INFO", logger_name=__name__)
 
 
-def add_poetry_installation_before_tox(content: str) -> str:
+def update_tox_installation_and_checkout_actions(content: str) -> str:
     updated_lines = []
 
     for line in content.splitlines():
         updated_lines.append(line)
-        for substring_of_interest, is_tox_installed_afterwards in (
-            ("- name: Install dependencies", True),
-            ("    charmcraft-channel: 3.x/stable", False)
+        for substring_of_interest, just_checkout, is_tox_installation_inline in (
+            ("run: pip install tox", False, True),
+            ("  pip install tox", False, False),
+            ("actions/checkout@v2", True, None),
+            ("actions/checkout@v3", True, None),
         ):
             number_of_spaces_before_matching_substring = line.find(substring_of_interest)
 
             if number_of_spaces_before_matching_substring == -1:
                 continue
 
+            if just_checkout:
+                updated_lines[-1].replace(substring_of_interest, "actions/checkout@v4")
+                continue
+
             indentation = " " * number_of_spaces_before_matching_substring
 
-            if is_tox_installed_afterwards:
+            if is_tox_installation_inline:
                 lines_replacing_original_line = [
-                    indentation + "- name: Install poetry",
-                    indentation + "  uses: ./.github/actions/install-poetry",
-                    "",
-                    indentation + "- name: Install tox"
+                    indentation + "run: |",
+                    indentation + "  sudo apt update && sudo apt install pipx && pipx ensurepath",
+                    indentation + "  pipx install tox"
                 ]
             else:
                 lines_replacing_original_line = [
-                    line,
-                    "",
-                    indentation + "- name: Install poetry",
-                    indentation + "  uses: ./.github/actions/install-poetry",
+                    indentation + "  sudo apt update && sudo apt install pipx && pipx ensurepath",
+                    indentation + "  pipx install tox",
                 ]
 
             updated_lines.pop()
@@ -67,33 +69,38 @@ def add_poetry_installation_before_tox(content: str) -> str:
 def migrate_to_poetry(repo: Client, charms: list[LocalCharmRepo], dry_run: bool) -> None:
     logger.info(f"processing repo at '{repo.base_path}'...")
 
-    commit_message = "ci: let tox find poetry as an external dependency"
-    try:
-        logger.info("\tadding the new GitHub action...")
-        new_github_action_path = repo.base_path / ".github" / "actions" / "install-poetry" / "action.yaml"
-        makedirs(dirname(new_github_action_path), exist_ok=True)
-        copy(PATH_FOR_THIS_SCRIPT_SUBFOLDER / "action.yaml", new_github_action_path)
+    logger.info("\tadding contributing instructions...")
+    contributing_file_path_from_script = PATH_FOR_THIS_SCRIPT_SUBFOLDER / "CONTRIBUTING.md"
+    contributing_file_path_in_repo = repo.base_path / "CONTRIBUTING.md"
+    if not exists(contributing_file_path_in_repo):
+        copy(contributing_file_path_from_script, contributing_file_path_in_repo)
+    else:
+        with open(contributing_file_path_from_script, "r") as source_file:
+            with open(contributing_file_path_in_repo, "wa") as preexisting_target_file:
+                preexisting_target_file.write("\n\n")
+                preexisting_target_file.write(source_file.read())
+    if repo.is_dirty():
+        repo.update_branch(
+            commit_msg="docs: add instructions for dependency management",
+            directory=".",
+            push=not dry_run,
+            force=True
+        )
 
-        logger.info("\tmodifying workflows using tox...")
-        for ci_file_path in (repo.base_path / ".github" / "workflows").glob("*.yaml"):
-            logger.info(f"\t\tprocessing '{ci_file_path}'...")
-            with open(ci_file_path, "r") as file:
-                file_content = file.read()
-            updated_file_content = add_poetry_installation_before_tox(content=file_content)
-            with open(ci_file_path, "w") as file:
-                file.write(updated_file_content)
-
-        if repo.is_dirty():
-            repo.update_branch(
-                commit_msg=commit_message,
-                directory=".",
-                push=not dry_run,
-                force=True
-            )
-
-    except Exception as exception:
-        logger.error(f"Something went wrong executing commit '{commit_message}'!")
-        raise exception
+    logger.info("\tmodifying workflows using tox...")
+    for ci_file_path in (repo.base_path / ".github" / "workflows").glob("*.yaml"):
+        with open(ci_file_path, "r") as file:
+            file_content = file.read()
+        updated_file_content = update_tox_installation_and_checkout_actions(content=file_content)
+        with open(ci_file_path, "w") as file:
+            file.write(updated_file_content)
+    if repo.is_dirty():
+        repo.update_branch(
+            commit_msg="ci: let tox find poetry as an external dependency",
+            directory=".",
+            push=not dry_run,
+            force=True
+        )
 
     raise NotImplementedError
     # for charm in charms:
@@ -121,8 +128,6 @@ def migrate_to_poetry(repo: Client, charms: list[LocalCharmRepo], dry_run: bool)
 
 
 def main() -> None:
-    umask(0)
-
     logger.info(f"temporary repository directory: '{PATH_FOR_MODIFIED_REPOSITORIES}'")
 
     with open(PATH_FOR_GITHUB_CREDENTIALS, "r") as file:

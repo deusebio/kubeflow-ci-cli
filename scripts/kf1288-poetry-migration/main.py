@@ -133,20 +133,20 @@ def update_tox_ini(_dir: Path) -> None:
     tox_ini_file_path = _dir / "tox.ini"
 
     tox_ini_parser = ConfigParser()
-    tox_ini_parser = tox_ini_parser.read(tox_ini_file_path)
+    tox_ini_parser.read(tox_ini_file_path)
 
-    config_parser.set("testenv", "deps", "\npoetry>=2.1.3")
+    tox_ini_parser.set("testenv", "deps", "\npoetry>=2.1.3")
 
     environment_prefix = "testenv:"
-    for section_name in config_parser.sections():
+    for section_name in tox_ini_parser.sections():
         if not section_name.startswith(environment_prefix):
             continue
         environment_name = section_name[len(environment_prefix):]
 
         if environment_name == "update-requirements":
-            config_parser.remove_section(section_name)
-            config_parser.add_section(section_name)
-            config_parser.set(
+            tox_ini_parser.remove_section(section_name)
+            tox_ini_parser.add_section(section_name)
+            tox_ini_parser.set(
                 section_name,
                 "commands_pre",
                 "\n".join(
@@ -158,7 +158,7 @@ def update_tox_ini(_dir: Path) -> None:
                     )
                 )
             )
-            config_parser.set(
+            tox_ini_parser.set(
                 section_name,
                 "commands",
                 "\n".join(
@@ -168,23 +168,23 @@ def update_tox_ini(_dir: Path) -> None:
                     )
                 )
             )
-            config_parser.set(
+            tox_ini_parser.set(
                 section_name,
                 "description",
                 "Update requirements including those in subdirs"
             )
 
         else:
-            config_parser.remove_option(section_name, "deps")
+            tox_ini_parser.remove_option(section_name, "deps")
             commands_pre = f"\npoetry install --only {environment_name}"
             if environment_name == "unit":
                 commands_pre += ",charm"
-            config_parser.set(section_name, "commands_pre", commands_pre)
+            tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 
-        config_parser.set(section_name, "skip_install", "true")
+        tox_ini_parser.set(section_name, "skip_install", "true")
 
     with open(tox_ini_file_path, "w") as file:
-        config_parser.write(file)
+        tox_ini_parser.write(file)
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:

@@ -81,10 +81,10 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     if repo.is_dirty():
         repo.update_branch(commit_msg=commit_message, directory=".", push=not dry_run, force=True)
 
-    commit_message_beginning = "build: migrate to poetry for dependency management"
-    logger.info(f"\timplementing alls commits related to '{commit_message}'")
+    commit_message = "build: migrate to poetry for dependency management"
+    logger.info(f"\timplementing all commits related to '{commit_message}'")
     for charm in charms:
-        actual_commit_message = f"{commit_message_beginning} in charm '{charm.name}'"
+        actual_commit_message = f"{commit_message} in charm '{charm.name}'"
         logger.info(f"\timplementing commit '{actual_commit_message}'")
         charm_folder = (repo.base_path / charm.tf_module).parent
         success = migrate_to_poetry(directory=charm_folder)
@@ -92,7 +92,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
             repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
         elif not success:
             logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
-    actual_commit_message = f"{commit_message_beginning} in base project folder"
+    actual_commit_message = f"{commit_message} in base project folder"
     logger.info(f"\t\timplementing commit '{actual_commit_message}'")
     base_project_folder = (repo.base_path / charm.tf_module).parent
     success = migrate_to_poetry(directory=base_project_folder)

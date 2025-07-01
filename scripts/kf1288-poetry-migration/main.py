@@ -1,6 +1,7 @@
 from json import loads
 from os import remove
 from os.path import abspath, dirname, exists, join
+from pathlib import Path
 from shutil import copy
 from sys import path as sys_path
 
@@ -25,7 +26,7 @@ PATH_FOR_REPOSITORY_LIST = Path("../../presets/kubeflow-repos.yaml")
 logger = setup_logging(log_level="INFO", logger_name=__name__)
 
 
-def migrate_to_poetry(directory: str) -> bool:
+def migrate_to_poetry(directory: Path) -> bool:
     return (
         update_tox_ini(_dir=directory)
         and update_pyproject_toml(_dir=directory)
@@ -103,7 +104,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
         logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
 
 
-def update_lock_file_and_exported_charm_requirements(_dir: str) -> bool:
+def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
     script_name = "update-lock-file-and-export-charm-requirements.sh"
     script_path_in_repo = _dir / script_name
 
@@ -125,12 +126,24 @@ def update_lock_file_and_exported_charm_requirements(_dir: str) -> bool:
         os.remove(script_path_in_repo)
 
 
-def update_pyproject_toml(_dir: str) -> bool:
+def update_pyproject_toml(_dir: Path) -> bool:
     raise NotImplementedError
 
 
-def update_tox_ini(_dir: str) -> bool:
-    raise NotImplementedError
+def update_tox_ini(_dir: Path) -> bool:
+    tox_ini_file_path = _dir / "tox.ini"
+
+    with open(tox_ini_file_path, "r") as file:
+        original_tox_ini_content = file.read()
+
+    updated_tox_ini_lines = []
+    for line in original_tox_ini_content.splitlines():
+        raise NotImplementedError
+
+    updated_tox_ini_content = '\n'.join(updated_tox_ini_lines)
+
+    with open(tox_ini_file_path, "w") as file:
+        file.write(updated_tox_ini_content)
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:

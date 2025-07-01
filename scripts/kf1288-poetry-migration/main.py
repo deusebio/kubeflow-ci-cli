@@ -1,4 +1,5 @@
 from json import loads
+from os import remove
 from os.path import abspath, dirname, exists, join
 from shutil import copy
 from sys import path as sys_path
@@ -103,7 +104,25 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
 
 
 def update_lock_file_and_exported_charm_requirements(_dir: str) -> bool:
-    raise NotImplementedError
+    script_name = "update-lock-file-and-export-charm-requirements.sh"
+    script_path_in_repo = _dir / script_name
+
+    copy(script_name, script_path_in_repo)
+
+    try:
+        subprocess.check_call(
+            ["/bin/bash", script_name],
+            cwd=_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        return True
+
+    except subprocess.CalledProcessError:
+        return False
+
+    finally:
+        os.remove(script_path_in_repo)
 
 
 def update_pyproject_toml(_dir: str) -> bool:

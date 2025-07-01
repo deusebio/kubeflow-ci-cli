@@ -25,45 +25,12 @@ logger = setup_logging(log_level="INFO", logger_name=__name__)
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:
-    updated_lines = []
-
-    for line in content.splitlines():
-        updated_lines.append(line)
-        for substring_of_interest, just_checkout, is_tox_installation_inline in (
-            ("run: pip install tox", False, True),
-            ("  pip install tox", False, False),
-            ("actions/checkout@v2", True, None),
-            ("actions/checkout@v3", True, None),
-        ):
-            number_of_spaces_before_matching_substring = line.find(substring_of_interest)
-
-            if number_of_spaces_before_matching_substring == -1:
-                continue
-
-            if just_checkout:
-                updated_lines[-1].replace(substring_of_interest, "actions/checkout@v4")
-                continue
-
-            indentation = " " * number_of_spaces_before_matching_substring
-
-            if is_tox_installation_inline:
-                lines_replacing_original_line = [
-                    indentation + "run: |",
-                    indentation + "  sudo apt update && sudo apt install pipx && pipx ensurepath",
-                    indentation + "  pipx install tox"
-                ]
-            else:
-                lines_replacing_original_line = [
-                    indentation + "  sudo apt update && sudo apt install pipx && pipx ensurepath",
-                    indentation + "  pipx install tox",
-                ]
-
-            updated_lines.pop()
-            updated_lines.extend(lines_replacing_original_line)
-
-    updated_lines.append("")
-
-    return "\n".join(updated_lines)
+    return (
+        content
+        .replace("actions/checkout@v2", "actions/checkout@v4")
+        .replace("actions/checkout@v3", "actions/checkout@v4")
+        .replace("pip install tox", "pipx install tox")
+    )
 
 
 def migrate_to_poetry(repo: Client, charms: list[LocalCharmRepo], dry_run: bool) -> None:

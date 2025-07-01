@@ -7,15 +7,15 @@
 
 To add/update/remove any dependencies and/or to upgrade Python, simply:
 
-1. first add/update/remove such dependencies to/in/from the desired group(s) below `[tool.poetry.group.<your-group>.dependencies]` in `pyproject.toml`, and/or upgrade Python itself in `requires-python` under `[project]`
+1. add/update/remove such dependencies to/in/from the desired group(s) below `[tool.poetry.group.<your-group>.dependencies]` in `pyproject.toml`, and/or upgrade Python itself in `requires-python` under `[project]`
 
     _⚠️ dependencies for the charm itself are also defined as dependencies of a dedicated group called `charm`, specifically below `[tool.poetry.group.charm.dependencies]`, and not as project dependencies below `[project.dependencies]` or `[tool.poetry.dependencies]` ⚠️_
 
-2. then run `tox -e update-requirements` to update not only the lock file but also the exported `requirements.txt`-like charm dependencies used by `charmcraft`
+2. run `tox -e update-requirements` to update not only the lock file but also the exported `requirements.txt`-like charm dependencies used by `charmcraft`
+
+    by this point, `poerty`, through `tox`, will let you know if there are any dependency conflicts to solve.
 
 3. optionally, if you also want to update your local environment for running Python commands/scripts yourself and not through tox, see [Running Python Environments](#running-python-environments) below
-
-By point 2., `poerty`, through `tox`, will let you know if there are any dependency conflicts to solve.
 
 
 ### Running `tox` Environments
@@ -25,7 +25,7 @@ To run `tox` environments locally, ensure to have `tox` installed first and then
 
 ### Running Python Environments
 
-To run Python commands/scripts locally from any environments built from any combinations of dependency groups without relying on `tox`:
-1. make sure you have `poetry` installed
-1. install any dependency groups that compose the environment of interest: `poetry install --only <your-group-a>,<your-group-b>` (or all groups, if you prefer: `poetry install --all-groups`)
-2. run Python commands/scripts via poetry: `poetry run python3 <whatever>`
+To run Python commands locally from any environments built from any combinations of dependency groups without relying on `tox`:
+1. ensure you have `poetry` installed
+2. install any required dependency groups: `poetry install --only <your-group-a>,<your-group-b>` (or all groups, if you prefer: `poetry install --all-groups`)
+3. run Python commands via poetry: `poetry run python3 <your-command>`

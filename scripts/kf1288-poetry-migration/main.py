@@ -132,7 +132,24 @@ def update_pyproject_toml(_dir: Path) -> None:
 def update_tox_ini(_dir: Path) -> None:
     tox_ini_file_path = _dir / "tox.ini"
 
-    tox_ini_parser = ConfigParser()
+    # removing the first comment lines to then add them back at the end for
+    # the subsequent trick of preserving comments to be feasible:
+    with open(tox_ini_file_path, "r") as file:
+        lines = file.read().splitlines(keepends=True)
+    copyright_lines = []
+    for line in lines:
+        if line.startswith("#") or line == "\n":
+            copyright_lines.append(line)
+        else:
+            break
+    with open(tox_ini_file_path, "w") as file:
+        file.writelines(lines[len(copyright_lines):])
+
+    # tricking ConfigParser into believing that lines starting with "#" or ";"
+    # are not comments but keys without a value:
+    # https://stackoverflow.com/questions/21476554/update-ini-file-without-removing-comments
+    tox_ini_parser = ConfigParser(comment_prefixes='€', allow_no_value=True)
+
     tox_ini_parser.read(tox_ini_file_path)
 
     tox_ini_parser.set("testenv", "deps", "\npoetry>=2.1.3")
@@ -144,8 +161,7 @@ def update_tox_ini(_dir: Path) -> None:
         environment_name = section_name[len(environment_prefix):]
 
         if environment_name == "update-requirements":
-            tox_ini_parser.remove_section(section_name)
-            tox_ini_parser.add_section(section_name)
+            tox_ini_parser.remove_option(section_name, "allowlist_externals")
             tox_ini_parser.set(
                 section_name,
                 "commands_pre",
@@ -175,16 +191,22 @@ def update_tox_ini(_dir: Path) -> None:
             )
 
         else:
-            tox_ini_parser.remove_option(section_name, "deps")
             commands_pre = f"\npoetry install --only {environment_name}"
             if environment_name == "unit":
                 commands_pre += ",charm"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 
+        tox_ini_parser.remove_option(section_name, "deps")
         tox_ini_parser.set(section_name, "skip_install", "true")
 
     with open(tox_ini_file_path, "w") as file:
         tox_ini_parser.write(file)
+
+    # adding back the first comment lines for the above-mentioned trick:
+    with open(tox_ini_file_path, "r") as file:
+        lines = file.read().splitlines(keepends=True)
+    with open(tox_ini_file_path, "w") as file:
+        file.writelines(copyright_lines + lines)
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:

@@ -197,16 +197,29 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List
     project_section.add("requires-python", ">=3.12,<4.0")
     pyproject_toml_content["project"] = project_section
 
+    poetry_section = table()
+    poetry_section.add("package-mode", False)
+    pyproject_toml_content["tool.poetry"] = poetry_section
+
     for environment_name in (environment_names + [ENVIRONMENT_NAME_FOR_CHARM]):
         if environment_name == ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING:
             continue
+
         environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
             file_dir: Path,
             file_name_base=REQUIREMENTS_FILE_NAME_BASE + (
                 f"-{environment_name}" if environment_name != ENVIRONMENT_NAME_FOR_CHARM else ""
             )
         )
-        raise NotImplementedError
+
+        group_section = table()
+        section.add("optional", True)
+        pyproject_toml_content[f"tool.poetry.group.{environment_name}"] = group_section
+
+        group_dependency_section = table()
+        for dependency, version_constraint in environment_requirements_to_version_contraints.items():
+            group_dependency_section.add(dependency, version_constraint)
+        pyproject_toml_content[f"tool.poetry.group.{environment_name}.dependencies"] = group_dependency_section
 
     with open(pyproject_toml_file_path, "w") as file:
         toml_dump(pyproject_toml_content, file)

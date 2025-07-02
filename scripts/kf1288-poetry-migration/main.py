@@ -188,7 +188,7 @@ def update_pyproject_toml(_dir: Path, environment_names: List[str]) -> None:
     for environment_name in (environment_names + [ENVIRONMENT_NAME_FOR_CHARM]):
         if environment_name == ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING:
             continue
-        environment_requirements = read_versioned_requirements(
+        environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
             file_dir: Path,
             file_name_base=REQUIREMENTS_FILE_NAME_BASE + (
                 f"-{environment_name}" if environment_name != ENVIRONMENT_NAME_FOR_CHARM else ""

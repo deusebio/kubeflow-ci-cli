@@ -186,8 +186,6 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
 def update_pyproject_toml(_dir: Path, project_name: str, environment_names_to_filenames: OrderedDict[str, str]) -> None:
     pyproject_toml_file_path = _dir / "pyproject.toml"
 
-    environment_names_to_filenames[ENVIRONMENT_NAME_FOR_CHARM] = REQUIREMENTS_FILE_NAME_BASE
-
     with open(pyproject_toml_file_path, "r") as file:
         pyproject_toml_content = toml_load(file)
 
@@ -253,6 +251,8 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, str]:
 
     environment_prefix = "testenv:"
     environment_names_to_filenames = OrderedDict()
+    environment_names_to_filenames[ENVIRONMENT_NAME_FOR_CHARM] = REQUIREMENTS_FILE_NAME_BASE
+
     for section_name in tox_ini_parser.sections():
         if not section_name.startswith(environment_prefix):
             continue

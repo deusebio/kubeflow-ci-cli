@@ -1,11 +1,12 @@
 from configparser import ConfigParser
-from json import loads
+from json import loads as json_loads
 from os import remove
 from os.path import abspath, dirname, exists, join
 from pathlib import Path
 from re import search
 from shutil import copy
 from sys import path as sys_path
+from tomlkit import dump as toml_dump, load as toml_load, table
 from typing import Dict, List
 
 sys_path.append(abspath(join(dirname(__file__), "../../")))
@@ -35,9 +36,9 @@ REQUIREMENTS_FILE_NAME_BASE = "requirements"
 logger = setup_logging(log_level="INFO", logger_name=__name__)
 
 
-def migrate_to_poetry(directory: Path) -> bool:
+def migrate_to_poetry(directory: Path, project: str) -> bool:
     environments = update_tox_ini(_dir=directory)
-    update_pyproject_toml(_dir=directory, environment_names=environments)
+    update_pyproject_toml(_dir=directory, project_name=project, environment_names=environments)
     return update_lock_file_and_exported_charm_requirements(_dir=directory)
 
 
@@ -45,7 +46,7 @@ def main() -> None:
     logger.info(f"temporary repository directory: '{PATH_FOR_MODIFIED_REPOSITORIES}'")
 
     with open(PATH_FOR_GITHUB_CREDENTIALS, "r") as file:
-        credentials = GitCredentials(**loads(file.read()))
+        credentials = GitCredentials(**json_loads(file.read()))
 
     client = KubeflowCI.read(
         filename=PATH_FOR_REPOSITORY_LIST,
@@ -92,11 +93,12 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
 
     commit_message = "build: migrate to poetry for dependency management"
     logger.info(f"\timplementing all commits related to '{commit_message}'")
+    project_name = repo.base_path.name
     for charm in charms:
         actual_commit_message = f"{commit_message} in charm '{charm.name}'"
         logger.info(f"\timplementing commit '{actual_commit_message}'")
         charm_folder = (repo.base_path / charm.tf_module).parent
-        success = migrate_to_poetry(directory=charm_folder)
+        success = migrate_to_poetry(directory=charm_folder, project=project_name)
         if success and repo.is_dirty():
             repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
         elif not success:
@@ -104,7 +106,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     actual_commit_message = f"{commit_message} in base project folder"
     logger.info(f"\t\timplementing commit '{actual_commit_message}'")
     base_project_folder = (repo.base_path / charm.tf_module).parent
-    success = migrate_to_poetry(directory=base_project_folder)
+    success = migrate_to_poetry(directory=base_project_folder, project=project_name)
     if success and repo.is_dirty():
         repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
     elif not success:
@@ -184,7 +186,17 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
         os.remove(script_path_in_repo)
 
 
-def update_pyproject_toml(_dir: Path, environment_names: List[str]) -> None:
+def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List[str]) -> None:
+    pyproject_toml_file_path = _dir / "pyproject.toml"
+
+    with open(pyproject_toml_file_path, "r") as file:
+        pyproject_toml_content = toml_load(file)
+
+    project_section = table()
+    project_section.add("name", project_name)
+    project_section.add("requires-python", ">=3.12,<4.0")
+    pyproject_toml_content["project"] = project_section
+
     for environment_name in (environment_names + [ENVIRONMENT_NAME_FOR_CHARM]):
         if environment_name == ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING:
             continue
@@ -195,6 +207,9 @@ def update_pyproject_toml(_dir: Path, environment_names: List[str]) -> None:
             )
         )
         raise NotImplementedError
+
+    with open(pyproject_toml_file_path, "w") as file:
+        toml_dump(pyproject_toml_content, file)
 
 
 def update_tox_ini(_dir: Path) -> List[str]:

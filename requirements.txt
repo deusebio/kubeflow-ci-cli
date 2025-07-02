@@ -6,3 +6,4 @@ prettytable==3.16.0
 envyaml==1.10.211231
 pandas==2.2.3
 oyaml==1.0
+tomlkit==0.13.3

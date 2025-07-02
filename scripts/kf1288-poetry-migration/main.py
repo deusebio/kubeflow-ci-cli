@@ -304,6 +304,27 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Optional[str]]:
                 commands_pre += f",{ENVIRONMENT_NAME_FOR_CHARM}"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 
+            stringified_commands = tox_ini_parser.get(section_name, "commands")
+            if "codespell" in stringified_commands:
+                lines = stringified_commands.splitlines(keepends=True)
+                updated_lines = []
+                line_index = 0
+                while not lines[line_index].strip().startswith("codespell"):
+                    updated_lines.append(lines[line_index])
+                    line_index += 1
+                while line_index < len(lines) and lines[line_index].strip().endswith(" \\"):
+                    updated_lines.append(lines[line_index])
+                    line_index += 1
+                if line_index < len(lines):
+                    updated_lines.append(lines[line_index])
+                    line_index += 1
+                updated_lines[-1] = f"{updated_lines[-1][:-1]} \\\n"
+                updated_lines.append("--skip {toxinidir}/./poetry.lock\n")
+                while line_index < len(lines):
+                    updated_lines.append(lines[line_index])
+                    line_index += 1
+                tox_ini_parser.set(section_name, "commands", "".join(updated_lines))
+
         tox_ini_parser.remove_option(section_name, "deps")
         tox_ini_parser.set(section_name, "skip_install", "true")
 

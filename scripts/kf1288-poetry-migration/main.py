@@ -270,15 +270,16 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
         if not section_name.startswith(environment_prefix):
             continue
 
-        environment_name = section_name[len(environment_prefix):]
+        environment_name_in_tox = section_name[len(environment_prefix):]
         environment_dependency_filename = None
         try:
             environment_dependencies = tox_ini_parser.get(section_name, "deps")
-            environment_dependency_filename = environment_dependencies.strip()[3:-4]
+            if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+                environment_dependency_filename = environment_dependencies.strip()[3:-4]
         except NoOptionError:
             continue
         finally:
-            environment_tox_names_to_filenames_and_poetry_names[environment_name] = (
+            environment_tox_names_to_filenames_and_poetry_names[environment_name_in_tox] = (
                 environment_dependency_filename,
                 (
                     environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
@@ -286,7 +287,7 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
                 )
             )
 
-        if environment_name == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+        if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             tox_ini_parser.remove_option(section_name, "allowlist_externals")
             tox_ini_parser.set(
                 section_name,
@@ -318,7 +319,7 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
 
         else:
             commands_pre = f"\npoetry install --only {environment_name}"
-            if environment_name == ENVIRONMENT_NAME_FOR_UNIT_TESTING:
+            if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UNIT_TESTING:
                 commands_pre += f",{ENVIRONMENT_NAME_FOR_CHARM}"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 

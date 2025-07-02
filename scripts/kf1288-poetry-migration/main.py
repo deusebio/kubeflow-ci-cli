@@ -104,6 +104,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
             repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
         elif not success:
             logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
+    # FIXME
     actual_commit_message = f"{commit_message} in base project folder"
     logger.info(f"\t\timplementing commit '{actual_commit_message}'")
     base_project_folder = (repo.base_path / charm.tf_module).parent
@@ -195,7 +196,7 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List
     poetry_section.add("package-mode", False)
     pyproject_toml_content["tool.poetry"] = poetry_section
 
-    for environment_name in (environment_names + [ENVIRONMENT_NAME_FOR_CHARM]):
+    for environment_name in ([ENVIRONMENT_NAME_FOR_CHARM] + environment_names):
         if environment_name in (ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING, ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS):
             continue
 

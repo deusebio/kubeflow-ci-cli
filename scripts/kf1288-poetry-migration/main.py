@@ -3,8 +3,10 @@ from json import loads
 from os import remove
 from os.path import abspath, dirname, exists, join
 from pathlib import Path
+from re import search
 from shutil import copy
 from sys import path as sys_path
+from typing import Dict, List
 
 sys_path.append(abspath(join(dirname(__file__), "../../")))
 
@@ -23,13 +25,19 @@ PATH_FOR_GITHUB_CREDENTIALS = "./credentials.json"
 PATH_FOR_MODIFIED_REPOSITORIES = Path("/home/ubuntu/canonical/temp")
 PATH_FOR_REPOSITORY_LIST = Path("../../presets/kubeflow-repos.yaml")
 
+ENVIRONMENT_NAME_FOR_CHARM = "charm"
+ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING = "tflint"
+ENVIRONMENT_NAME_FOR_UNIT_TESTING = "unit"
+ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS = "update-requirements"
+REQUIREMENTS_FILE_NAME_BASE = "requirements"
+
 
 logger = setup_logging(log_level="INFO", logger_name=__name__)
 
 
 def migrate_to_poetry(directory: Path) -> bool:
-    update_tox_ini(_dir=directory)
-    update_pyproject_toml(_dir=directory)
+    environments = update_tox_ini(_dir=directory)
+    update_pyproject_toml(_dir=directory, environment_names=environments)
     return update_lock_file_and_exported_charm_requirements(_dir=directory)
 
 
@@ -103,6 +111,57 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
         logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
 
 
+def read_versioned_requirements_and_remove_files(file_name_base: str) -> Dict[str, str]:
+    requirement_name_regex = "[^a-zA-Z-_]"
+
+    in_file_path = file_dir / f"{file_name_base}.in"
+    txt_file = file_dir / f"{file_name_base}.txt"
+
+    requirements_to_version_contraints = {}
+    unversioned_requirements = set()
+
+    with open(in_file_path, "r") as file:
+        content = file.read()
+    for line in content.splitlines():
+        line = line.strip()
+        if not line.startswith("#") and not line.startswith("-r"):
+            first_match_not_composing_requirement_name = search(requirement_name_regex, line)
+            if first_match_not_composing_requirement_name is None:
+                requirement = line
+                version_constraint = None
+                unversioned_requirements.add(requirement)
+            else:
+                requirement_name_end_character_index = first_match_not_composing_requirement_name.start()
+                requirement = line[:requirement_name_end_character_index]
+                version_constraint = line[requirement_name_end_character_index:].strip()
+                requirements_to_version_contraints[requirement] = version_constraint
+
+    if unversioned_requirements:
+        # in case .in files contain any repeated requirements:
+        for requirement in requirements_to_version_contraints:
+            if requirement in unversioned_requirements:
+                unversioned_requirements.remove()
+
+        with open(txt_file, "r") as file:
+            content = file.read()
+        for line in content.splitlines():
+            if line[0] in (" ", "#"):
+                continue
+            requirement_name_end_character_index = search(requirement_name_regex, line).start()
+            requirement = line[:requirement_name_end_character_index]
+            version = line[requirement_name_end_character_index + 2:]  # excluding "=="
+            if requirement in unversioned_requirements:
+                unversioned_requirements.remove(requirement)
+                requirements_to_version_contraints[requirement] = f"^{version}"  # caret pinning
+
+    assert not unversioned_requirements
+
+    remove(in_file_path)
+    remove(txt_file)
+
+    return requirements_to_version_contraints
+
+
 def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
     script_name = "update-lock-file-and-export-charm-requirements.sh"
     script_path_in_repo = _dir / script_name
@@ -125,11 +184,20 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
         os.remove(script_path_in_repo)
 
 
-def update_pyproject_toml(_dir: Path) -> None:
-    raise NotImplementedError
+def update_pyproject_toml(_dir: Path, environment_names: List[str]) -> None:
+    for environment_name in (environment_names + [ENVIRONMENT_NAME_FOR_CHARM]):
+        if environment_name == ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING:
+            continue
+        environment_requirements = read_versioned_requirements(
+            file_dir: Path,
+            file_name_base=REQUIREMENTS_FILE_NAME_BASE + (
+                f"-{environment_name}" if environment_name != ENVIRONMENT_NAME_FOR_CHARM else ""
+            )
+        )
+        raise NotImplementedError
 
 
-def update_tox_ini(_dir: Path) -> None:
+def update_tox_ini(_dir: Path) -> List[str]:
     tox_ini_file_path = _dir / "tox.ini"
 
     # removing the first comment lines to then add them back at the end for
@@ -155,12 +223,17 @@ def update_tox_ini(_dir: Path) -> None:
     tox_ini_parser.set("testenv", "deps", "\npoetry>=2.1.3")
 
     environment_prefix = "testenv:"
+    environment_names = []
     for section_name in tox_ini_parser.sections():
         if not section_name.startswith(environment_prefix):
             continue
         environment_name = section_name[len(environment_prefix):]
+        environment_names.append(environment_name)
 
-        if environment_name == "update-requirements":
+        if environment_name == ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING:
+            continue
+
+        elif environment_name == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             tox_ini_parser.remove_option(section_name, "allowlist_externals")
             tox_ini_parser.set(
                 section_name,
@@ -192,8 +265,8 @@ def update_tox_ini(_dir: Path) -> None:
 
         else:
             commands_pre = f"\npoetry install --only {environment_name}"
-            if environment_name == "unit":
-                commands_pre += ",charm"
+            if environment_name == ENVIRONMENT_NAME_FOR_UNIT_TESTING:
+                commands_pre += f",{ENVIRONMENT_NAME_FOR_CHARM}"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 
         tox_ini_parser.remove_option(section_name, "deps")
@@ -207,6 +280,8 @@ def update_tox_ini(_dir: Path) -> None:
         lines = file.read().splitlines(keepends=True)
     with open(tox_ini_file_path, "w") as file:
         file.writelines(copyright_lines + lines)
+
+    return environment_names
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:

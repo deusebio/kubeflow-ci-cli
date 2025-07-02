@@ -9,7 +9,7 @@ from shutil import copy
 from subprocess import CalledProcessError, DEVNULL, check_call
 from sys import path as sys_path
 from tomlkit import dump as toml_dump, load as toml_load, table
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 sys_path.append(abspath(join(dirname(__file__), "../../")))
 
@@ -205,8 +205,11 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_tox_names_t
 
     pyproject_toml_content["tool"]["poetry"]["group"] = table()
 
-    for environment_name_in_tox, (environment_filename, environment_name_in_poetry) in environment_tox_names_to_filenames_and_poetry_names.items():
-        if environment_filename is None and environment_name != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+    for (
+        environment_name_in_tox,
+        (environment_filename, environment_name_in_poetry)
+    ) in environment_tox_names_to_filenames_and_poetry_names.items():
+        if environment_filename is None and environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             continue
 
         group_section = table()
@@ -274,7 +277,10 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
         finally:
             environment_tox_names_to_filenames_and_poetry_names[environment_name] = (
                 environment_dependency_filename,
-                environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
+                (
+                    environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
+                    if environment_dependency_filename is not None else None
+                )
             )
 
         if environment_name == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:

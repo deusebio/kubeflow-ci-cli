@@ -1,4 +1,5 @@
-from configparser import ConfigParser
+from configparser import ConfigParser, NoOptionError
+from collections import OrderedDict
 from json import loads as json_loads
 from os import remove
 from os.path import abspath, dirname, exists, join
@@ -28,7 +29,6 @@ PATH_FOR_MODIFIED_REPOSITORIES = Path("/home/ubuntu/canonical/temp")
 PATH_FOR_REPOSITORY_LIST = Path("../../presets/kubeflow-repos.yaml")
 
 ENVIRONMENT_NAME_FOR_CHARM = "charm"
-ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING = "tflint"
 ENVIRONMENT_NAME_FOR_UNIT_TESTING = "unit"
 ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS = "update-requirements"
 REQUIREMENTS_FILE_NAME_BASE = "requirements"
@@ -38,8 +38,8 @@ logger = setup_logging(log_level="INFO", logger_name=__name__)
 
 
 def migrate_to_poetry(directory: Path, project: str) -> bool:
-    environments = update_tox_ini(_dir=directory)
-    update_pyproject_toml(_dir=directory, project_name=project, environment_names=environments)
+    environments_to_filenames = update_tox_ini(_dir=directory)
+    update_pyproject_toml(_dir=directory, project_name=project, environment_names_to_filenames=environments_to_filenames)
     return update_lock_file_and_exported_charm_requirements(_dir=directory)
 
 
@@ -183,8 +183,10 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
         remove(script_path_in_repo)
 
 
-def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List[str]) -> None:
+def update_pyproject_toml(_dir: Path, project_name: str, environment_names_to_filenames: OrderedDict[str, str]) -> None:
     pyproject_toml_file_path = _dir / "pyproject.toml"
+
+    environment_names_to_filenames[ENVIRONMENT_NAME_FOR_CHARM] = REQUIREMENTS_FILE_NAME_BASE
 
     with open(pyproject_toml_file_path, "r") as file:
         pyproject_toml_content = toml_load(file)
@@ -200,31 +202,31 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List
 
     pyproject_toml_content["tool"]["poetry"]["group"] = table()
 
-    for environment_name in ([ENVIRONMENT_NAME_FOR_CHARM] + environment_names):
-        if environment_name in (ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING, ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS):
+    for environment_name, environment_filename in environment_names_to_filenames.items():
+        if environment_filename is None and environment_name != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             continue
-
-        environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
-            file_dir=_dir,
-            file_name_base=REQUIREMENTS_FILE_NAME_BASE + (
-                f"-{environment_name}" if environment_name != ENVIRONMENT_NAME_FOR_CHARM else ""
-            )
-        )
 
         group_section = table()
         group_section.add("optional", True)
         pyproject_toml_content["tool"]["poetry"]["group"][environment_name] = group_section
 
         group_dependency_section = table()
-        for dependency, version_constraint in environment_requirements_to_version_contraints.items():
-            group_dependency_section.add(dependency, version_constraint)
+        if environment_name != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+            environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
+                file_dir=_dir,
+                file_name_base=environment_filename
+            )
+            for dependency, version_constraint in environment_requirements_to_version_contraints.items():
+                group_dependency_section.add(dependency, version_constraint)
+        else:
+            group_dependency_section.add("poetry-plugin-export", "^1.9.0")
         pyproject_toml_content["tool"]["poetry"]["group"][environment_name]["dependencies"] = group_dependency_section
 
     with open(pyproject_toml_file_path, "w") as file:
         toml_dump(pyproject_toml_content, file)
 
 
-def update_tox_ini(_dir: Path) -> List[str]:
+def update_tox_ini(_dir: Path) -> OrderedDict[str, str]:
     tox_ini_file_path = _dir / "tox.ini"
 
     # removing the first comment lines to then add them back at the end for
@@ -250,17 +252,21 @@ def update_tox_ini(_dir: Path) -> List[str]:
     tox_ini_parser.set("testenv", "deps", "\npoetry>=2.1.3")
 
     environment_prefix = "testenv:"
-    environment_names = []
+    environment_names_to_filenames = []
     for section_name in tox_ini_parser.sections():
         if not section_name.startswith(environment_prefix):
             continue
-        environment_name = section_name[len(environment_prefix):]
-        environment_names.append(environment_name)
 
-        if environment_name == ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING:
+        environment_name = section_name[len(environment_prefix):]
+        try:
+            environment_dependencies = tox_ini_parser.get(section_name, "deps")
+            environment_dependency_filename = environment_dependencies.strip()[3:-4]
+            environment_names_to_filenames[environment_name] = environment_dependency_filename
+        except NoOptionError:
+            environment_names_to_filenames[environment_name] = None
             continue
 
-        elif environment_name == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+        if environment_name == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             tox_ini_parser.remove_option(section_name, "allowlist_externals")
             tox_ini_parser.set(
                 section_name,
@@ -308,7 +314,7 @@ def update_tox_ini(_dir: Path) -> List[str]:
     with open(tox_ini_file_path, "w") as file:
         file.writelines(copyright_lines + lines)
 
-    return environment_names
+    return environment_names_to_filenames
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:

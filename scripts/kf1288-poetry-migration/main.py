@@ -52,6 +52,9 @@ def main() -> None:
     with open(PATH_FOR_GITHUB_CREDENTIALS, "r") as file:
         credentials = GitCredentials(**json_loads(file.read()))
 
+    with open("pull_request_body_template.md", "r") as file:
+        pull_request_body_template = file.read()
+
     client = KubeflowCI.read(
         filename=PATH_FOR_REPOSITORY_LIST,
         base_path=PATH_FOR_MODIFIED_REPOSITORIES,
@@ -60,10 +63,10 @@ def main() -> None:
 
     client.canon_run(
         wrapper_func=process_repository,
-        branch_name="just-a-dry-run",  # TODO
+        branch_name=f"kf-7526/poetry-migration",
         title="build: migrate to poetry for Python dependency management",
-        body="",  # TODO
-        dry_run=True
+        body=pull_request_body_template,
+        dry_run=False
     )
 
 

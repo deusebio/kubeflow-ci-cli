@@ -37,15 +37,6 @@ REQUIREMENTS_FILE_NAME_BASE = "requirements"
 logger = setup_logging(log_level="INFO", logger_name=__name__)
 
 
-def migrate_to_poetry(directory: Path, project: str) -> bool:
-    environment_tox_names_to_filenames_and_poetry_names = update_tox_ini(_dir=directory)
-    update_pyproject_toml(
-        _dir=directory, project_name=project,
-        environment_tox_names_to_filenames_and_poetry_names=environment_tox_names_to_filenames_and_poetry_names
-    )
-    return update_lock_file_and_exported_charm_requirements(_dir=directory)
-
-
 def main() -> None:
     logger.info(f"temporary repository directory: '{PATH_FOR_MODIFIED_REPOSITORIES}'")
 
@@ -68,6 +59,15 @@ def main() -> None:
         body=pull_request_body_template,
         dry_run=False
     )
+
+
+def migrate_to_poetry(directory: Path, project: str) -> bool:
+    environment_tox_names_to_filenames_and_poetry_names = update_tox_ini(_dir=directory)
+    update_pyproject_toml(
+        _dir=directory, project_name=project,
+        environment_tox_names_to_filenames_and_poetry_names=environment_tox_names_to_filenames_and_poetry_names
+    )
+    return update_lock_file_and_exported_charm_requirements(_dir=directory)
 
 
 def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool) -> None:
@@ -272,19 +272,19 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
 
         environment_name_in_tox = section_name[len(environment_prefix):]
         environment_dependency_filename = None
+        environment_name_in_poetry = None
         try:
             environment_dependencies = tox_ini_parser.get(section_name, "deps")
             if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
                 environment_dependency_filename = environment_dependencies.strip()[3:-4]
+                environment_name_in_poetry = environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
+            else:
+                environment_name_in_poetry = environment_name_in_tox
         except NoOptionError:
             continue
         finally:
             environment_tox_names_to_filenames_and_poetry_names[environment_name_in_tox] = (
-                environment_dependency_filename,
-                (
-                    environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
-                    if environment_dependency_filename is not None else None
-                )
+                environment_dependency_filename, environment_name_in_poetry
             )
 
         if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:

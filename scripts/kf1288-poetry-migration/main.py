@@ -304,6 +304,7 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Optional[str]]:
                 commands_pre += f",{ENVIRONMENT_NAME_FOR_CHARM}"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 
+            # letting codespell ignore poetry's lock file, when codespell is employed:
             stringified_commands = tox_ini_parser.get(section_name, "commands")
             if "codespell" in stringified_commands:
                 lines = stringified_commands.splitlines(keepends=True)

@@ -124,46 +124,48 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
     txt_file = file_dir / f"{file_name_base}.txt"
 
     requirements_to_version_contraints = {}
-    unversioned_requirements = set()
 
-    with open(in_file_path, "r") as file:
-        content = file.read()
-    for line in content.splitlines():
-        line = line.strip()
-        if not line.startswith("#") and not line.startswith("-r"):
-            first_match_not_composing_requirement_name = search(requirement_name_regex, line)
-            if first_match_not_composing_requirement_name is None:
-                requirement = line
-                version_constraint = None
-                unversioned_requirements.add(requirement)
-            else:
-                requirement_name_end_character_index = first_match_not_composing_requirement_name.start()
-                requirement = line[:requirement_name_end_character_index]
-                version_constraint = line[requirement_name_end_character_index:].strip()
-                requirements_to_version_contraints[requirement] = version_constraint
+    if exists(in_file_path):
+        unversioned_requirements = set()
 
-    if unversioned_requirements:
-        # in case .in files contain any repeated requirements:
-        for requirement in requirements_to_version_contraints:
-            if requirement in unversioned_requirements:
-                unversioned_requirements.remove()
-
-        with open(txt_file, "r") as file:
+        with open(in_file_path, "r") as file:
             content = file.read()
         for line in content.splitlines():
-            if not line or line[0] in (" ", "#"):
-                continue
-            requirement_name_end_character_index = search(requirement_name_regex, line).start()
-            requirement = line[:requirement_name_end_character_index]
-            version = line[requirement_name_end_character_index + 2:]  # excluding "=="
-            if requirement in unversioned_requirements:
-                unversioned_requirements.remove(requirement)
-                requirements_to_version_contraints[requirement] = f"^{version}"  # caret pinning
+            line = line.strip()
+            if not line.startswith("#") and not line.startswith("-r"):
+                first_match_not_composing_requirement_name = search(requirement_name_regex, line)
+                if first_match_not_composing_requirement_name is None:
+                    requirement = line.lower()
+                    version_constraint = None
+                    unversioned_requirements.add(requirement)
+                else:
+                    requirement_name_end_character_index = first_match_not_composing_requirement_name.start()
+                    requirement = line[:requirement_name_end_character_index].lower()
+                    version_constraint = line[requirement_name_end_character_index:].strip()
+                    requirements_to_version_contraints[requirement] = version_constraint
 
-    assert not unversioned_requirements
+        if unversioned_requirements:
+            # in case .in files contain any repeated requirements:
+            for requirement in requirements_to_version_contraints:
+                if requirement in unversioned_requirements:
+                    unversioned_requirements.remove()
 
-    remove(in_file_path)
-    remove(txt_file)
+            with open(txt_file, "r") as file:
+                content = file.read()
+            for line in content.splitlines():
+                if not line or line[0] in (" ", "#"):
+                    continue
+                requirement_name_end_character_index = search(requirement_name_regex, line).start()
+                requirement = line[:requirement_name_end_character_index]
+                version = line[requirement_name_end_character_index + 2:]  # excluding "=="
+                if requirement in unversioned_requirements:
+                    unversioned_requirements.remove(requirement)
+                    requirements_to_version_contraints[requirement] = f"^{version}"  # caret pinning
+
+        assert not unversioned_requirements
+
+        remove(in_file_path)
+        remove(txt_file)
 
     return requirements_to_version_contraints
 

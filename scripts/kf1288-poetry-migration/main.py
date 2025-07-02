@@ -62,10 +62,10 @@ def main() -> None:
 
 
 def migrate_to_poetry(directory: Path, project: str) -> bool:
-    environment_tox_names_to_filenames_and_poetry_names = update_tox_ini(_dir=directory)
+    poetry_group_names_to_filenames = update_tox_ini(_dir=directory)
     update_pyproject_toml(
         _dir=directory, project_name=project,
-        environment_tox_names_to_filenames_and_poetry_names=environment_tox_names_to_filenames_and_poetry_names
+        poetry_group_names_to_filenames=poetry_group_names_to_filenames
     )
     return update_lock_file_and_exported_charm_requirements(_dir=directory)
 
@@ -191,7 +191,7 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
         remove(script_path_in_repo)
 
 
-def update_pyproject_toml(_dir: Path, project_name: str, environment_tox_names_to_filenames_and_poetry_names: OrderedDict[str, Tuple[Optional[str], Optional[str]]]) -> None:
+def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_filenames: OrderedDict[str, Optional[str]]) -> None:
     pyproject_toml_file_path = _dir / "pyproject.toml"
 
     with open(pyproject_toml_file_path, "r") as file:
@@ -208,28 +208,25 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_tox_names_t
 
     pyproject_toml_content["tool"]["poetry"]["group"] = table()
 
-    for (
-        environment_name_in_tox,
-        (environment_filename, environment_name_in_poetry)
-    ) in environment_tox_names_to_filenames_and_poetry_names.items():
-        if environment_filename is None and environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+    for group_name, group_filename in poetry_group_names_to_filenames.items():
+        if group_filename is None and group_name != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             continue
 
         group_section = table()
         group_section.add("optional", True)
-        pyproject_toml_content["tool"]["poetry"]["group"][environment_name_in_poetry] = group_section
+        pyproject_toml_content["tool"]["poetry"]["group"][group_name] = group_section
 
         group_dependency_section = table()
-        if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+        if group_name != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
                 file_dir=_dir,
-                file_name_base=environment_filename
+                file_name_base=group_filename
             )
             for dependency, version_constraint in environment_requirements_to_version_contraints.items():
                 group_dependency_section.add(dependency, version_constraint)
         else:
             group_dependency_section.add("poetry-plugin-export", "^1.9.0")
-        pyproject_toml_content["tool"]["poetry"]["group"][environment_name_in_poetry]["dependencies"] = group_dependency_section
+        pyproject_toml_content["tool"]["poetry"]["group"][group_name]["dependencies"] = group_dependency_section
 
     with open(pyproject_toml_file_path, "w") as file:
         toml_dump(pyproject_toml_content, file)
@@ -261,31 +258,25 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
     tox_ini_parser.set("testenv", "deps", "\npoetry>=2.1.3")
 
     environment_prefix = "testenv:"
-    environment_tox_names_to_filenames_and_poetry_names = OrderedDict()
-    environment_tox_names_to_filenames_and_poetry_names[ENVIRONMENT_NAME_FOR_CHARM] = (
-        REQUIREMENTS_FILE_NAME_BASE, ENVIRONMENT_NAME_FOR_CHARM
-    )
+    poetry_group_names_to_filenames = OrderedDict()
+    poetry_group_names_to_filenames[ENVIRONMENT_NAME_FOR_CHARM] = REQUIREMENTS_FILE_NAME_BASE
 
     for section_name in tox_ini_parser.sections():
         if not section_name.startswith(environment_prefix):
             continue
 
         environment_name_in_tox = section_name[len(environment_prefix):]
-        environment_dependency_filename = None
-        environment_name_in_poetry = None
         try:
             environment_dependencies = tox_ini_parser.get(section_name, "deps")
-            if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
-                environment_dependency_filename = environment_dependencies.strip()[3:-4]
-                environment_name_in_poetry = environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
-            else:
-                environment_name_in_poetry = environment_name_in_tox
         except NoOptionError:
             continue
-        finally:
-            environment_tox_names_to_filenames_and_poetry_names[environment_name_in_tox] = (
-                environment_dependency_filename, environment_name_in_poetry
-            )
+        if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
+            environment_dependency_filename = environment_dependencies.strip()[3:-4]
+            group_name_in_poetry = environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
+        else:
+            environment_dependency_filename = None
+            group_name_in_poetry = environment_name_in_tox
+        poetry_group_names_to_filenames[group_name_in_poetry] = environment_dependency_filename
 
         if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             tox_ini_parser.remove_option(section_name, "allowlist_externals")
@@ -351,13 +342,14 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
     with open(tox_ini_file_path, "w") as file:
         tox_ini_parser.write(file)
 
-    # adding back the first comment lines for the above-mentioned trick:
+    # adding back the first comment lines for the above-mentioned trick, while
+    # also removing the sporious, duplicate final whitespace:
     with open(tox_ini_file_path, "r") as file:
         lines = file.read().splitlines(keepends=True)
     with open(tox_ini_file_path, "w") as file:
-        file.writelines(copyright_lines + lines)
+        file.writelines(copyright_lines + lines[:-1])
 
-    return environment_tox_names_to_filenames_and_poetry_names
+    return poetry_group_names_to_filenames
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:

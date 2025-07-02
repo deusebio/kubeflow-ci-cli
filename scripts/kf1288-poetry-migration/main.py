@@ -5,6 +5,7 @@ from os.path import abspath, dirname, exists, join
 from pathlib import Path
 from re import search
 from shutil import copy
+from subprocess import CalledProcessError, DEVNULL, check_call
 from sys import path as sys_path
 from tomlkit import dump as toml_dump, load as toml_load, table
 from typing import Dict, List
@@ -74,7 +75,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
         copy(contributing_file_path_from_script, contributing_file_path_in_repo)
     else:
         with open(contributing_file_path_from_script, "r") as source_file:
-            with open(contributing_file_path_in_repo, "wa") as preexisting_target_file:
+            with open(contributing_file_path_in_repo, "w") as preexisting_target_file:
                 preexisting_target_file.write("\n\n")
                 preexisting_target_file.write(source_file.read())
     if repo.is_dirty():
@@ -96,7 +97,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     project_name = repo.base_path.name
     for charm in charms:
         actual_commit_message = f"{commit_message} in charm '{charm.name}'"
-        logger.info(f"\timplementing commit '{actual_commit_message}'")
+        logger.info(f"\t\timplementing commit '{actual_commit_message}'")
         charm_folder = (repo.base_path / charm.tf_module).parent
         success = migrate_to_poetry(directory=charm_folder, project=project_name)
         if success and repo.is_dirty():
@@ -113,7 +114,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
         logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
 
 
-def read_versioned_requirements_and_remove_files(file_name_base: str) -> Dict[str, str]:
+def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base: str) -> Dict[str, str]:
     requirement_name_regex = "[^a-zA-Z-_]"
 
     in_file_path = file_dir / f"{file_name_base}.in"
@@ -147,7 +148,7 @@ def read_versioned_requirements_and_remove_files(file_name_base: str) -> Dict[st
         with open(txt_file, "r") as file:
             content = file.read()
         for line in content.splitlines():
-            if line[0] in (" ", "#"):
+            if not line or line[0] in (" ", "#"):
                 continue
             requirement_name_end_character_index = search(requirement_name_regex, line).start()
             requirement = line[:requirement_name_end_character_index]
@@ -171,19 +172,12 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
     copy(script_name, script_path_in_repo)
 
     try:
-        subprocess.check_call(
-            ["/bin/bash", script_name],
-            cwd=_dir,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        check_call(["/bin/bash", script_name], cwd=_dir, stdout=DEVNULL, stderr=DEVNULL)
         return True
-
-    except subprocess.CalledProcessError:
+    except CalledProcessError:
         return False
-
     finally:
-        os.remove(script_path_in_repo)
+        remove(script_path_in_repo)
 
 
 def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List[str]) -> None:
@@ -202,18 +196,18 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List
     pyproject_toml_content["tool.poetry"] = poetry_section
 
     for environment_name in (environment_names + [ENVIRONMENT_NAME_FOR_CHARM]):
-        if environment_name == ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING:
+        if environment_name in (ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING, ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS):
             continue
 
         environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
-            file_dir: Path,
+            file_dir=_dir,
             file_name_base=REQUIREMENTS_FILE_NAME_BASE + (
                 f"-{environment_name}" if environment_name != ENVIRONMENT_NAME_FOR_CHARM else ""
             )
         )
 
         group_section = table()
-        section.add("optional", True)
+        group_section.add("optional", True)
         pyproject_toml_content[f"tool.poetry.group.{environment_name}"] = group_section
 
         group_dependency_section = table()

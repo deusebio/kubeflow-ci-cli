@@ -9,7 +9,7 @@ from shutil import copy
 from subprocess import CalledProcessError, DEVNULL, check_call
 from sys import path as sys_path
 from tomlkit import dump as toml_dump, load as toml_load, table
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 sys_path.append(abspath(join(dirname(__file__), "../../")))
 
@@ -185,7 +185,7 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
         remove(script_path_in_repo)
 
 
-def update_pyproject_toml(_dir: Path, project_name: str, environment_names_to_filenames: OrderedDict[str, str]) -> None:
+def update_pyproject_toml(_dir: Path, project_name: str, environment_names_to_filenames: OrderedDict[str, Optional[str]]) -> None:
     pyproject_toml_file_path = _dir / "pyproject.toml"
 
     with open(pyproject_toml_file_path, "r") as file:
@@ -226,7 +226,7 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_names_to_fi
         toml_dump(pyproject_toml_content, file)
 
 
-def update_tox_ini(_dir: Path) -> OrderedDict[str, str]:
+def update_tox_ini(_dir: Path) -> OrderedDict[str, Optional[str]]:
     tox_ini_file_path = _dir / "tox.ini"
 
     # removing the first comment lines to then add them back at the end for

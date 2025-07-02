@@ -309,7 +309,7 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
             )
 
         else:
-            commands_pre = f"\npoetry install --only {environment_name_in_tox}"
+            commands_pre = f"\npoetry install --only {group_name_in_poetry}"
             if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UNIT_TESTING:
                 commands_pre += f",{ENVIRONMENT_NAME_FOR_CHARM}"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)

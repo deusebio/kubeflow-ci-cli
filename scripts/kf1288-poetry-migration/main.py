@@ -194,7 +194,9 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List
 
     poetry_section = table()
     poetry_section.add("package-mode", False)
-    pyproject_toml_content["tool.poetry"] = poetry_section
+    pyproject_toml_content["tool"]["poetry"] = poetry_section
+
+    pyproject_toml_content["tool"]["poetry"]["group"] = table()
 
     for environment_name in ([ENVIRONMENT_NAME_FOR_CHARM] + environment_names):
         if environment_name in (ENVIRONMENT_NAME_FOR_TERRAFORM_LINTING, ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS):
@@ -209,12 +211,12 @@ def update_pyproject_toml(_dir: Path, project_name: str, environment_names: List
 
         group_section = table()
         group_section.add("optional", True)
-        pyproject_toml_content[f"tool.poetry.group.{environment_name}"] = group_section
+        pyproject_toml_content["tool"]["poetry"]["group"][environment_name] = group_section
 
         group_dependency_section = table()
         for dependency, version_constraint in environment_requirements_to_version_contraints.items():
             group_dependency_section.add(dependency, version_constraint)
-        pyproject_toml_content[f"tool.poetry.group.{environment_name}.dependencies"] = group_dependency_section
+        pyproject_toml_content["tool"]["poetry"]["group"][environment_name]["dependencies"] = group_dependency_section
 
     with open(pyproject_toml_file_path, "w") as file:
         toml_dump(pyproject_toml_content, file)

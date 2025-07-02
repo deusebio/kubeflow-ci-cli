@@ -95,24 +95,26 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     commit_message = "build: migrate to poetry for dependency management"
     logger.info(f"\timplementing all commits related to '{commit_message}'")
     project_name = repo.base_path.name
+    visited_charm_folders = set()
     for charm in charms:
         actual_commit_message = f"{commit_message} in charm '{charm.name}'"
         logger.info(f"\t\timplementing commit '{actual_commit_message}'")
         charm_folder = (repo.base_path / charm.tf_module).parent
+        visited_charm_folders.add(charm_folder)
         success = migrate_to_poetry(directory=charm_folder, project=project_name)
         if success and repo.is_dirty():
             repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
         elif not success:
             logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
-    # FIXME
-    actual_commit_message = f"{commit_message} in base project folder"
-    logger.info(f"\t\timplementing commit '{actual_commit_message}'")
-    base_project_folder = (repo.base_path / charm.tf_module).parent
-    success = migrate_to_poetry(directory=base_project_folder, project=project_name)
-    if success and repo.is_dirty():
-        repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
-    elif not success:
-        logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
+    base_project_folder = repo.base_path
+    if base_project_folder not in visited_charm_folders:
+        actual_commit_message = f"{commit_message} in base project folder"
+        logger.info(f"\t\timplementing commit '{actual_commit_message}'")
+        success = migrate_to_poetry(directory=base_project_folder, project=project_name)
+        if success and repo.is_dirty():
+            repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
+        elif not success:
+            logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
 
 
 def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base: str) -> Dict[str, str]:

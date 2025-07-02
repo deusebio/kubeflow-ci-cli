@@ -252,7 +252,7 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, str]:
     tox_ini_parser.set("testenv", "deps", "\npoetry>=2.1.3")
 
     environment_prefix = "testenv:"
-    environment_names_to_filenames = []
+    environment_names_to_filenames = OrderedDict()
     for section_name in tox_ini_parser.sections():
         if not section_name.startswith(environment_prefix):
             continue

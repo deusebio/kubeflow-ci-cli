@@ -1,6 +1,6 @@
 ## How to Manage Python Dependencies and Environments
 
-`tox` is the only tool required locally, as `tox` internally installs and uses `poetry`, be it to manage Python dependencies, to run `tox` environments or to export `poetry`-style charm dependencies in `requirements.txt`-like format for `charmcraft`. Optionally, `poerty` can be additionally installed independently just for the sake of running Python commands/scripts locally outside of `tox` during local debugging/development. Refer to the respective official docs for [installing poetry](https://python-poetry.org/docs/#installation) and [installing tox](https://tox.wiki/en/latest/installation.html).
+`tox` is the only tool required locally, as `tox` internally installs and uses `poetry`, be it to manage Python dependencies or to run `tox` environments. Optionally, `poerty` can be additionally installed independently just for the sake of running Python commands locally outside of `tox` during debugging/development. Refer to the respective official docs for [installing poetry](https://python-poetry.org/docs/#installation) and [installing tox](https://tox.wiki/en/latest/installation.html).
 
 
 ### Updating Dependencies

@@ -240,6 +240,10 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
 def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_filenames: OrderedDict[str, Optional[str]]) -> None:
     pyproject_toml_file_path = _dir / "pyproject.toml"
 
+    if not exists(pyproject_toml_file_path):
+        with open(pyproject_toml_file_path, "w") as file:
+            pass
+
     with open(pyproject_toml_file_path, "r") as file:
         pyproject_toml_content = toml_load(file)
 

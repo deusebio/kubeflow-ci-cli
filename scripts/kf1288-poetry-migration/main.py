@@ -159,7 +159,7 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
                     version_constraint = line[requirement_name_end_character_index:].strip()
                     requirements_to_version_contraints[requirement] = version_constraint
             elif line.startswith("-r"):
-                dependency_group = s.strip().split()[1][:-3].replace(f"{REQUIREMENTS_FILE_NAME_BASE}", "")
+                dependency_group = line.strip().split()[1][:-4].replace(f"{REQUIREMENTS_FILE_NAME_BASE}", "")
                 if not dependency_group:
                     dependency_group = ENVIRONMENT_NAME_FOR_CHARM
                 else:
@@ -332,7 +332,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
             environment_dependency_filename = environment_dependencies.strip()[3:-4]
             group_name_in_poetry = environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
             group_requirements_to_version_contraints, nested_dependency_groups = (
-                read_versioned_requirements_and_remove_files(file_dir=_dir, file_name_base=group_filename)
+                read_versioned_requirements_and_remove_files(file_dir=_dir, file_name_base=environment_dependency_filename)
             )
             poetry_group_names_to_versioned_requirements[group_name_in_poetry] = group_requirements_to_version_contraints
 
@@ -360,10 +360,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
             )
 
         else:
-            dependency_groups = 
             commands_pre = f"\npoetry install --only {",".join(nested_dependency_groups.union({group_name_in_poetry}))}"
-            if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UNIT_TESTING:
-                commands_pre += f",{ENVIRONMENT_NAME_FOR_CHARM}"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 
             # letting codespell ignore poetry's lock file, when codespell is employed:

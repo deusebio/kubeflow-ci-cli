@@ -252,23 +252,17 @@ def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_f
     pyproject_toml_content["tool"]["poetry"]["group"] = table()
 
     for group_name, group_filename in poetry_group_names_to_filenames.items():
-        if group_filename is None and group_name != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
-            continue
-
         group_section = table()
         group_section.add("optional", True)
         pyproject_toml_content["tool"]["poetry"]["group"][group_name] = group_section
 
         group_dependency_section = table()
-        if group_name != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
-            environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
-                file_dir=_dir,
-                file_name_base=group_filename
-            )
-            for dependency, version_constraint in environment_requirements_to_version_contraints.items():
-                group_dependency_section.add(dependency, version_constraint)
-        else:
-            group_dependency_section.add("poetry-plugin-export", "^1.9.0")
+        environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
+            file_dir=_dir,
+            file_name_base=group_filename
+        )
+        for dependency, version_constraint in environment_requirements_to_version_contraints.items():
+            group_dependency_section.add(dependency, version_constraint)
         pyproject_toml_content["tool"]["poetry"]["group"][group_name]["dependencies"] = group_dependency_section
 
     with open(pyproject_toml_file_path, "w") as file:
@@ -316,32 +310,17 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
         if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             environment_dependency_filename = environment_dependencies.strip()[3:-4]
             group_name_in_poetry = environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
-        else:
-            environment_dependency_filename = None
-            group_name_in_poetry = environment_name_in_tox
-        poetry_group_names_to_filenames[group_name_in_poetry] = environment_dependency_filename
+            poetry_group_names_to_filenames[group_name_in_poetry] = environment_dependency_filename
 
         if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             tox_ini_parser.remove_option(section_name, "allowlist_externals")
             tox_ini_parser.set(
                 section_name,
-                "commands_pre",
+                "commands",
                 "\n".join(
                     (
                         "\n# updating all groups' locked dependencies:",
                         "poetry lock --regenerate",
-                        "# installing only the dependencies required for exporting requirements:",
-                        "poetry install --only update-requirements"
-                    )
-                )
-            )
-            tox_ini_parser.set(
-                section_name,
-                "commands",
-                "\n".join(
-                    (
-                        "\n# exporting locked charm dependencies into pip-compatible requirements.txt format:",
-                        "poetry export --only charm -f requirements.txt -o requirements.txt --without-hashes"
                     )
                 )
             )

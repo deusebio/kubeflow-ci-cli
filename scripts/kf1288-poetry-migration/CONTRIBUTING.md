@@ -11,7 +11,7 @@ To add/update/remove any dependencies and/or to upgrade Python, simply:
 
     _⚠️ dependencies for the charm itself are also defined as dependencies of a dedicated group called `charm`, specifically below `[tool.poetry.group.charm.dependencies]`, and not as project dependencies below `[project.dependencies]` or `[tool.poetry.dependencies]` ⚠️_
 
-2. run `tox -e update-requirements` to update not only the lock file but also the exported `requirements.txt`-like charm dependencies used by `charmcraft`
+2. run `tox -e update-requirements` to update the lock file
 
     by this point, `poerty`, through `tox`, will let you know if there are any dependency conflicts to solve.
 

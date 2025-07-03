@@ -26,7 +26,7 @@ from kfcicli.utils import setup_logging
 
 PATH_FOR_MODIFIED_CHARMCRAFT_LINES = Path("modified_charmcraft_lines")
 PATH_FOR_GITHUB_CREDENTIALS = "./credentials.json"
-PATH_FOR_MODIFIED_REPOSITORIES = Path("/home/ubuntu/canonical/temp")
+PATH_FOR_MODIFIED_REPOSITORIES = Path("/home/mattia/Desktop/canonical/temp")
 PATH_FOR_PULL_REQUEST_BODY_TEMPLATE = "./pull_request_body_template.md"
 PATH_FOR_REPOSITORY_LIST = Path("../../presets/kubeflow-repos.yaml")
 PATH_FOR_THIS_SCRIPT_SUBFOLDER = Path(__file__).parent
@@ -57,10 +57,10 @@ def main() -> None:
 
     client.canon_run(
         wrapper_func=process_repository,
-        branch_name=f"temp",
+        branch_name="kf-7526/poetry-migration",
         title="build: migrate to poetry for Python dependency management",
         body=pull_request_body_template,
-        dry_run=True
+        dry_run=False
     )
 
 

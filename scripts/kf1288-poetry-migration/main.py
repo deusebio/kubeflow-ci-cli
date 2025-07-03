@@ -8,7 +8,7 @@ from re import search
 from shutil import copy
 from subprocess import CalledProcessError, DEVNULL, check_call
 from sys import path as sys_path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Set, Tuple
 
 from tomlkit import dump as toml_dump, load as toml_load, table
 
@@ -67,13 +67,13 @@ def main() -> None:
 def migrate_to_poetry(directory: Path, project: str, is_it_a_charm: bool) -> bool:
     if is_it_a_charm:
         update_charmcraft(_dir=directory)
-    poetry_group_names_to_filenames = update_tox_ini(
+    poetry_group_names_to_versioned_requirements = update_tox_ini(
         _dir=directory,
         are_there_subcharms=not is_it_a_charm
     )
     update_pyproject_toml(
         _dir=directory, project_name=project,
-        poetry_group_names_to_filenames=poetry_group_names_to_filenames
+        poetry_group_names_to_versioned_requirements=poetry_group_names_to_versioned_requirements
     )
     return update_lock_file_and_exported_charm_requirements(_dir=directory)
 
@@ -131,13 +131,14 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
             logger.error(f"\t\tfailed implementing commit '{actual_commit_message}'")
 
 
-def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base: str) -> Dict[str, str]:
+def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base: str) -> Tuple[Dict[str, str], Set]:
     requirement_name_regex = "[^a-zA-Z0-9-_]"
 
     in_file_path = file_dir / f"{file_name_base}.in"
     txt_file = file_dir / f"{file_name_base}.txt"
 
     requirements_to_version_contraints = {}
+    nested_dependency_groups = set()
 
     if exists(in_file_path):
         unversioned_requirements = set()
@@ -157,6 +158,13 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
                     requirement = line[:requirement_name_end_character_index].lower()
                     version_constraint = line[requirement_name_end_character_index:].strip()
                     requirements_to_version_contraints[requirement] = version_constraint
+            elif line.startswith("-r"):
+                dependency_group = s.strip().split()[1][:-3].replace(f"{REQUIREMENTS_FILE_NAME_BASE}", "")
+                if not dependency_group:
+                    dependency_group = ENVIRONMENT_NAME_FOR_CHARM
+                else:
+                    dependency_group = dependency_group[1:]  # removing the hyphen too
+                nested_dependency_groups.add(dependency_group)
 
         if unversioned_requirements:
             # in case .in files contain any repeated requirements:
@@ -181,7 +189,7 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
         remove(in_file_path)
         remove(txt_file)
 
-    return requirements_to_version_contraints
+    return requirements_to_version_contraints, nested_dependency_groups
 
 
 def update_charmcraft(_dir: Path) -> None:
@@ -237,7 +245,7 @@ def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
         remove(script_path_in_repo)
 
 
-def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_filenames: OrderedDict[str, Optional[str]]) -> None:
+def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_versioned_requirements: OrderedDict[str, Dict[str, str]]) -> None:
     pyproject_toml_file_path = _dir / "pyproject.toml"
 
     if not exists(pyproject_toml_file_path):
@@ -261,12 +269,7 @@ def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_f
 
     pyproject_toml_content["tool"]["poetry"]["group"] = table()
 
-    for group_name, group_filename in poetry_group_names_to_filenames.items():
-        environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
-            file_dir=_dir,
-            file_name_base=group_filename
-        )
-
+    for group_name, environment_requirements_to_version_contraints in poetry_group_names_to_versioned_requirements.items():
         if not environment_requirements_to_version_contraints and group_name == ENVIRONMENT_NAME_FOR_CHARM:
             continue
 
@@ -283,7 +286,7 @@ def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_f
         toml_dump(pyproject_toml_content, file)
 
 
-def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Tuple[Optional[str], Optional[str]]]:
+def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Dict[str, str]]:
     tox_ini_file_path = _dir / "tox.ini"
 
     # removing the first comment lines to then add them back at the end for
@@ -302,15 +305,19 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Tu
     # tricking ConfigParser into believing that lines starting with "#" or ";"
     # are not comments but keys without a value:
     # https://stackoverflow.com/questions/21476554/update-ini-file-without-removing-comments
-    tox_ini_parser = ConfigParser(comment_prefixes='€', allow_no_value=True)
+    tox_ini_parser = ConfigParser(comment_prefixes="€", allow_no_value=True)
 
     tox_ini_parser.read(tox_ini_file_path)
 
     tox_ini_parser.set("testenv", "deps", "\npoetry>=2.1.3")
 
     environment_prefix = "testenv:"
-    poetry_group_names_to_filenames = OrderedDict()
-    poetry_group_names_to_filenames[ENVIRONMENT_NAME_FOR_CHARM] = REQUIREMENTS_FILE_NAME_BASE
+    poetry_group_names_to_versioned_requirements = OrderedDict()
+
+    poetry_group_names_to_versioned_requirements[ENVIRONMENT_NAME_FOR_CHARM], nested_dependency_groups = (
+        read_versioned_requirements_and_remove_files(file_dir=_dir, file_name_base=REQUIREMENTS_FILE_NAME_BASE)
+    )
+    assert not nested_dependency_groups
 
     for section_name in tox_ini_parser.sections():
         if not section_name.startswith(environment_prefix):
@@ -324,7 +331,10 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Tu
         if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             environment_dependency_filename = environment_dependencies.strip()[3:-4]
             group_name_in_poetry = environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
-            poetry_group_names_to_filenames[group_name_in_poetry] = environment_dependency_filename
+            group_requirements_to_version_contraints, nested_dependency_groups = (
+                read_versioned_requirements_and_remove_files(file_dir=_dir, file_name_base=group_filename)
+            )
+            poetry_group_names_to_versioned_requirements[group_name_in_poetry] = group_requirements_to_version_contraints
 
         if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             tox_ini_parser.remove_option(section_name, "allowlist_externals")
@@ -350,7 +360,8 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Tu
             )
 
         else:
-            commands_pre = f"\npoetry install --only {group_name_in_poetry}"
+            dependency_groups = 
+            commands_pre = f"\npoetry install --only {",".join(nested_dependency_groups.union({group_name_in_poetry}))}"
             if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UNIT_TESTING:
                 commands_pre += f",{ENVIRONMENT_NAME_FOR_CHARM}"
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
@@ -390,7 +401,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Tu
     with open(tox_ini_file_path, "w") as file:
         file.writelines(copyright_lines + lines[:-1])
 
-    return poetry_group_names_to_filenames
+    return poetry_group_names_to_versioned_requirements
 
 
 def update_tox_installation_and_checkout_actions(content: str) -> str:

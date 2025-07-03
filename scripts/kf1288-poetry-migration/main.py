@@ -147,7 +147,7 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
             content = file.read()
         for line in content.splitlines():
             line = line.strip()
-            if not line.startswith("#") and not line.startswith("-r"):
+            if not line.startswith("#") and not line.startswith("-r") and line.strip():
                 first_match_not_composing_requirement_name = search(requirement_name_regex, line)
                 if first_match_not_composing_requirement_name is None:
                     requirement = line.lower()
@@ -170,7 +170,7 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
             # in case .in files contain any repeated requirements:
             for requirement in requirements_to_version_contraints:
                 if requirement in unversioned_requirements:
-                    unversioned_requirements.remove()
+                    unversioned_requirements.remove(requirement)
 
             with open(txt_file, "r") as file:
                 content = file.read()

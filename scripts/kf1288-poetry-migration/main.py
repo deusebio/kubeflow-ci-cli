@@ -252,6 +252,9 @@ def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_f
     project_section.add("requires-python", ">=3.12,<4.0")
     pyproject_toml_content["project"] = project_section
 
+    if "tool" not in pyproject_toml_content:
+        pyproject_toml_content["tool"] = table()
+
     poetry_section = table()
     poetry_section.add("package-mode", False)
     pyproject_toml_content["tool"]["poetry"] = poetry_section

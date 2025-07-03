@@ -67,7 +67,10 @@ def main() -> None:
 def migrate_to_poetry(directory: Path, project: str, is_it_a_charm: bool) -> bool:
     if is_it_a_charm:
         update_charmcraft(_dir=directory)
-    poetry_group_names_to_filenames = update_tox_ini(_dir=directory)
+    poetry_group_names_to_filenames = update_tox_ini(
+        _dir=directory,
+        are_there_subcharms=not is_it_a_charm
+    )
     update_pyproject_toml(
         _dir=directory, project_name=project,
         poetry_group_names_to_filenames=poetry_group_names_to_filenames
@@ -269,7 +272,7 @@ def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_f
         toml_dump(pyproject_toml_content, file)
 
 
-def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional[str]]]:
+def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Tuple[Optional[str], Optional[str]]]:
     tox_ini_file_path = _dir / "tox.ini"
 
     # removing the first comment lines to then add them back at the end for
@@ -319,6 +322,11 @@ def update_tox_ini(_dir: Path) -> OrderedDict[str, Tuple[Optional[str], Optional
                 "commands",
                 "\n".join(
                     (
+                        "\n# updating all groups' locked dependencies:",
+                        "poetry lock --regenerate",
+                        "\n# updating all groups' locked dependencies for every subcharm folder:",
+                        """find charms/ -maxdepth 1 -mindepth 1 -type d -exec bash -c "cd {} && poetry lock --regenerate" \;""",
+                    ) if are_there_subcharms else (
                         "\n# updating all groups' locked dependencies:",
                         "poetry lock --regenerate",
                     )

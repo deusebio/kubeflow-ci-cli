@@ -8,8 +8,9 @@ from re import search
 from shutil import copy
 from subprocess import CalledProcessError, DEVNULL, check_call
 from sys import path as sys_path
-from tomlkit import dump as toml_dump, load as toml_load, table
 from typing import Dict, List, Optional, Tuple
+
+from tomlkit import dump as toml_dump, load as toml_load, table
 
 sys_path.append(abspath(join(dirname(__file__), "../../")))
 
@@ -23,10 +24,12 @@ from kfcicli.main import (
 from kfcicli.utils import setup_logging
 
 
-PATH_FOR_THIS_SCRIPT_SUBFOLDER = Path(__file__).parent
+PATH_FOR_MODIFIED_CHARMCRAFT_LINES = Path("modified_charmcraft_lines")
 PATH_FOR_GITHUB_CREDENTIALS = "./credentials.json"
 PATH_FOR_MODIFIED_REPOSITORIES = Path("/home/ubuntu/canonical/temp")
+PATH_FOR_PULL_REQUEST_BODY_TEMPLATE = "./pull_request_body_template.md"
 PATH_FOR_REPOSITORY_LIST = Path("../../presets/kubeflow-repos.yaml")
+PATH_FOR_THIS_SCRIPT_SUBFOLDER = Path(__file__).parent
 
 ENVIRONMENT_NAME_FOR_CHARM = "charm"
 ENVIRONMENT_NAME_FOR_UNIT_TESTING = "unit"
@@ -43,7 +46,7 @@ def main() -> None:
     with open(PATH_FOR_GITHUB_CREDENTIALS, "r") as file:
         credentials = GitCredentials(**json_loads(file.read()))
 
-    with open("pull_request_body_template.md", "r") as file:
+    with open(PATH_FOR_PULL_REQUEST_BODY_TEMPLATE, "r") as file:
         pull_request_body_template = file.read()
 
     client = KubeflowCI.read(
@@ -62,6 +65,7 @@ def main() -> None:
 
 
 def migrate_to_poetry(directory: Path, project: str) -> bool:
+    update_charmcraft_if_any(_dir=directory)
     poetry_group_names_to_filenames = update_tox_ini(_dir=directory)
     update_pyproject_toml(
         _dir=directory, project_name=project,
@@ -174,6 +178,43 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
         remove(txt_file)
 
     return requirements_to_version_contraints
+
+
+def update_charmcraft_if_any(_dir: Path) -> None:
+    charmcraft_path = _dir / "charmcraft.yaml"
+
+    if exists(charmcraft_path):
+        with open(charmcraft_path, "r") as file:
+            original_charmcraft_lines = file.read().splitlines()
+
+        updated_charmcraft_lines = []
+
+        # adding all before "parts":
+        line_index = 0
+        while not original_charmcraft_lines[line_index].startswith("parts:"):
+            updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
+            line_index += 1
+        updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
+        line_index += 1
+
+        # adding the intermediate, modified lines of "parts":
+        with open(PATH_FOR_MODIFIED_CHARMCRAFT_LINES, "r") as file:
+            intermediate_modified_charmcraft_lines = file.read().splitlines()
+        for line in intermediate_modified_charmcraft_lines:
+            updated_charmcraft_lines.append(line)
+
+        # finding the starting index of the "files" part:
+        line_index = len(original_charmcraft_lines) - 1
+        while not original_charmcraft_lines[line_index].startswith("  files:"):
+            line_index -= 1
+
+        # adding the "files" part with the comments above:
+        while line_index < len(original_charmcraft_lines):
+            updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
+            line_index += 1
+
+        with open(charmcraft_path, "w") as file:
+            file.write("\n".join(updated_charmcraft_lines))
 
 
 def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:

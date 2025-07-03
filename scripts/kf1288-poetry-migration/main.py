@@ -262,15 +262,19 @@ def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_f
     pyproject_toml_content["tool"]["poetry"]["group"] = table()
 
     for group_name, group_filename in poetry_group_names_to_filenames.items():
+        environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
+            file_dir=_dir,
+            file_name_base=group_filename
+        )
+
+        if not environment_requirements_to_version_contraints and group_name == ENVIRONMENT_NAME_FOR_CHARM:
+            continue
+
         group_section = table()
         group_section.add("optional", True)
         pyproject_toml_content["tool"]["poetry"]["group"][group_name] = group_section
 
         group_dependency_section = table()
-        environment_requirements_to_version_contraints = read_versioned_requirements_and_remove_files(
-            file_dir=_dir,
-            file_name_base=group_filename
-        )
         for dependency, version_constraint in environment_requirements_to_version_contraints.items():
             group_dependency_section.add(dependency, version_constraint)
         pyproject_toml_content["tool"]["poetry"]["group"][group_name]["dependencies"] = group_dependency_section

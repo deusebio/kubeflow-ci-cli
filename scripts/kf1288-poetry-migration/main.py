@@ -64,8 +64,9 @@ def main() -> None:
     )
 
 
-def migrate_to_poetry(directory: Path, project: str) -> bool:
-    update_charmcraft_if_any(_dir=directory)
+def migrate_to_poetry(directory: Path, project: str, is_it_a_charm: bool) -> bool:
+    if is_it_a_charm:
+        update_charmcraft(_dir=directory)
     poetry_group_names_to_filenames = update_tox_ini(_dir=directory)
     update_pyproject_toml(
         _dir=directory, project_name=project,
@@ -111,7 +112,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
         logger.info(f"\t\timplementing commit '{actual_commit_message}'")
         charm_folder = (repo.base_path / charm.tf_module).parent
         visited_charm_folders.add(charm_folder)
-        success = migrate_to_poetry(directory=charm_folder, project=project_name)
+        success = migrate_to_poetry(directory=charm_folder, project=project_name, is_it_a_charm=True)
         if success and repo.is_dirty():
             repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
         elif not success:
@@ -120,7 +121,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     if base_project_folder not in visited_charm_folders:
         actual_commit_message = f"{commit_message} in base project folder"
         logger.info(f"\t\timplementing commit '{actual_commit_message}'")
-        success = migrate_to_poetry(directory=base_project_folder, project=project_name)
+        success = migrate_to_poetry(directory=base_project_folder, project=project_name, is_it_a_charm=False)
         if success and repo.is_dirty():
             repo.update_branch(commit_msg=actual_commit_message, directory=".", push=not dry_run, force=True)
         elif not success:
@@ -180,41 +181,42 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
     return requirements_to_version_contraints
 
 
-def update_charmcraft_if_any(_dir: Path) -> None:
+def update_charmcraft(_dir: Path) -> None:
     charmcraft_path = _dir / "charmcraft.yaml"
 
-    if exists(charmcraft_path):
-        with open(charmcraft_path, "r") as file:
-            original_charmcraft_lines = file.read().splitlines()
+    with open(charmcraft_path, "r") as file:
+        original_charmcraft_lines = file.read().splitlines()
 
-        updated_charmcraft_lines = []
+    updated_charmcraft_lines = []
 
-        # adding all before "parts":
-        line_index = 0
-        while not original_charmcraft_lines[line_index].startswith("parts:"):
-            updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
-            line_index += 1
+    # adding all before "parts":
+    line_index = 0
+    while not original_charmcraft_lines[line_index].startswith("parts:"):
+        updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
+        line_index += 1
+    updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
+    line_index += 1
+
+    # adding the intermediate, modified lines of "parts":
+    with open(PATH_FOR_MODIFIED_CHARMCRAFT_LINES, "r") as file:
+        intermediate_modified_charmcraft_lines = file.read().splitlines()
+    for line in intermediate_modified_charmcraft_lines:
+        updated_charmcraft_lines.append(line)
+
+    # finding the starting index of the "files" part:
+    line_index = len(original_charmcraft_lines) - 1
+    while not original_charmcraft_lines[line_index].startswith("  files:"):
+        line_index -= 1
+
+    # adding the "files" part with the comments above:
+    while line_index < len(original_charmcraft_lines):
         updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
         line_index += 1
 
-        # adding the intermediate, modified lines of "parts":
-        with open(PATH_FOR_MODIFIED_CHARMCRAFT_LINES, "r") as file:
-            intermediate_modified_charmcraft_lines = file.read().splitlines()
-        for line in intermediate_modified_charmcraft_lines:
-            updated_charmcraft_lines.append(line)
+    updated_charmcraft_lines.append("")
 
-        # finding the starting index of the "files" part:
-        line_index = len(original_charmcraft_lines) - 1
-        while not original_charmcraft_lines[line_index].startswith("  files:"):
-            line_index -= 1
-
-        # adding the "files" part with the comments above:
-        while line_index < len(original_charmcraft_lines):
-            updated_charmcraft_lines.append(original_charmcraft_lines[line_index])
-            line_index += 1
-
-        with open(charmcraft_path, "w") as file:
-            file.write("\n".join(updated_charmcraft_lines))
+    with open(charmcraft_path, "w") as file:
+        file.write("\n".join(updated_charmcraft_lines))
 
 
 def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:

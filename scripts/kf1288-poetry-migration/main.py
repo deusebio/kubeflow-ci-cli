@@ -151,7 +151,6 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
                 first_match_not_composing_requirement_name = search(requirement_name_regex, line)
                 if first_match_not_composing_requirement_name is None:
                     requirement = line.lower()
-                    version_constraint = None
                     unversioned_requirements.add(requirement)
                 else:
                     requirement_name_end_character_index = first_match_not_composing_requirement_name.start()
@@ -159,7 +158,7 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
                     version_constraint = line[requirement_name_end_character_index:].strip()
                     requirements_to_version_contraints[requirement] = version_constraint
             elif line.startswith("-r"):
-                dependency_group = line.strip().split()[1][:-4].replace(f"{REQUIREMENTS_FILE_NAME_BASE}", "")
+                dependency_group = line.strip().split()[1].split(".")[0].replace(f"{REQUIREMENTS_FILE_NAME_BASE}", "")
                 if not dependency_group:
                     dependency_group = ENVIRONMENT_NAME_FOR_CHARM
                 else:

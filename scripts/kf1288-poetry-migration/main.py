@@ -54,10 +54,10 @@ def main() -> None:
 
     client.canon_run(
         wrapper_func=process_repository,
-        branch_name=f"kf-7526/poetry-migration",
+        branch_name=f"temp",
         title="build: migrate to poetry for Python dependency management",
         body=pull_request_body_template,
-        dry_run=False
+        dry_run=True
     )
 
 

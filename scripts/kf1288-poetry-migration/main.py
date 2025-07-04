@@ -344,7 +344,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
                     (
                         "\n# updating all groups' locked dependencies:",
                         "poetry lock --regenerate",
-                        "# updating all groups' locked dependencies for every subcharm folder:",
+                        "# updating all groups' locked dependencies for every charm subfolder:",
                         """find charms/ -maxdepth 1 -mindepth 1 -type d -exec bash -c "cd {} && poetry lock --regenerate" \;""",
                     ) if are_there_subcharms else (
                         "\n# updating all groups' locked dependencies:",
@@ -355,7 +355,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
             tox_ini_parser.set(
                 section_name,
                 "description",
-                "Update requirements" + (", including those in subcharm folders" if are_there_subcharms else "")
+                "Update requirements" + (", including those in charm subfolders" if are_there_subcharms else "")
             )
             if are_there_subcharms:
                 tox_ini_parser.set(section_name, "allowlist_externals", "find")

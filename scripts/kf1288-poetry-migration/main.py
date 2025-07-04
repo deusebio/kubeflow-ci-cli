@@ -278,7 +278,14 @@ def update_pyproject_toml(_dir: Path, project_name: str, poetry_group_names_to_v
 
         group_dependency_section = table()
         for dependency, version_constraint in environment_requirements_to_version_contraints.items():
-            group_dependency_section.add(dependency, version_constraint)
+            if "[" not in dependency:
+                group_dependency_section.add(dependency, version_constraint)
+            else:
+                dependency_name_and_extra = dependency.split("[")
+                dependency_name = dependency_name_and_extra[0]
+                dependency_extras = [dependency_name_and_extra[1][:-1]]
+                dependency_spec = {"extras" = dependency_extras, "version" = version_constraint}
+                group_dependency_section.add(dependency_name, dependency_spec)
         pyproject_toml_content["tool"]["poetry"]["group"][group_name]["dependencies"] = group_dependency_section
 
     with open(pyproject_toml_file_path, "w") as file:

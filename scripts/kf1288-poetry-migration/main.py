@@ -333,7 +333,10 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
             group_requirements_to_version_contraints, nested_dependency_groups = (
                 read_versioned_requirements_and_remove_files(file_dir=_dir, file_name_base=environment_dependency_filename)
             )
-            poetry_group_names_to_versioned_requirements[group_name_in_poetry] = group_requirements_to_version_contraints
+            if group_name_in_poetry not in poetry_group_names_to_versioned_requirements:
+                poetry_group_names_to_versioned_requirements[group_name_in_poetry] = group_requirements_to_version_contraints
+            else:
+                assert not group_requirements_to_version_contraints
 
         if environment_name_in_tox == ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
             tox_ini_parser.remove_option(section_name, "allowlist_externals")

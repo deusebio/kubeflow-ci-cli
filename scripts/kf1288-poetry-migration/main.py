@@ -328,7 +328,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
         except NoOptionError:
             continue
         if environment_name_in_tox != ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS:
-            environment_dependency_filename = environment_dependencies.strip()[3:-4]
+            environment_dependency_filename = environment_dependencies.strip()[3:].split(".")[0]
             group_name_in_poetry = environment_dependency_filename.replace(f"{REQUIREMENTS_FILE_NAME_BASE}-", "")
             group_requirements_to_version_contraints, nested_dependency_groups = (
                 read_versioned_requirements_and_remove_files(file_dir=_dir, file_name_base=environment_dependency_filename)

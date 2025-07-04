@@ -230,7 +230,7 @@ def update_charmcraft(_dir: Path) -> None:
 
 
 def update_lock_file_and_exported_charm_requirements(_dir: Path) -> bool:
-    script_name = "update-lock-file-and-export-charm-requirements.sh"
+    script_name = "update-locked-requirements.sh"
     script_path_in_repo = _dir / script_name
 
     copy(script_name, script_path_in_repo)

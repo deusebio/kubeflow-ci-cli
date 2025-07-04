@@ -375,25 +375,35 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
             tox_ini_parser.set(section_name, "commands_pre", commands_pre)
 
             # letting codespell ignore poetry's lock file, when codespell is employed:
+            """
+            0    codespell {[vars]lib_path}
+            1    codespell . --skip .git --skip .tox --skip build --skip venv --skip .mypy_cache
+            2    ruff check {[vars]all_path}
+            3    black --check --diff {[vars]all_path}
+            """
             stringified_commands = tox_ini_parser.get(section_name, "commands")
             if "codespell" in stringified_commands:
                 lines = stringified_commands.splitlines(keepends=True)
                 updated_lines = []
                 line_index = 0
-                while not lines[line_index].strip().startswith("codespell"):
-                    updated_lines.append(lines[line_index])
-                    line_index += 1
-                while line_index < len(lines) and lines[line_index].strip().endswith(" \\"):
-                    updated_lines.append(lines[line_index])
-                    line_index += 1
-                if line_index < len(lines):
-                    updated_lines.append(lines[line_index])
-                    line_index += 1
-                updated_lines[-1] = f"{updated_lines[-1][:-1]} \\\n"
-                updated_lines.append("--skip *.lock\n")
                 while line_index < len(lines):
-                    updated_lines.append(lines[line_index])
-                    line_index += 1
+                    codespell_word_hit = False
+                    while line_index < len(lines):
+                        if lines[line_index].strip().startswith("codespell"):
+                            codespell_word_hit = True
+                            break
+                        updated_lines.append(lines[line_index])
+                        line_index += 1
+                    while line_index < len(lines) and lines[line_index].strip().endswith(" \\"):
+                        updated_lines.append(lines[line_index])
+                        line_index += 1
+                    if line_index < len(lines):
+                        updated_lines.append(lines[line_index])
+                        line_index += 1
+                    if codespell_word_hit:
+                        updated_lines[-1] = f"{updated_lines[-1][:-1]} \\\n"
+                        updated_lines.append("--skip *.lock\n")
+                        codespell_word_hit = False
                 tox_ini_parser.set(section_name, "commands", "".join(updated_lines))
 
         tox_ini_parser.remove_option(section_name, "deps")

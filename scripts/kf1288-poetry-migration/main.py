@@ -357,6 +357,8 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
                 "description",
                 "Update requirements including those in subdirs"
             )
+            if are_there_subcharms:
+                tox_ini_parser.set(section_name, "allowlist_externals", "find")
 
         else:
             commands_pre = f"\npoetry install --only {",".join(nested_dependency_groups.union({group_name_in_poetry}))}"

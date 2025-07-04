@@ -132,7 +132,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
 
 
 def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base: str) -> Tuple[Dict[str, str], Set]:
-    requirement_name_regex = "[^a-zA-Z0-9-_]"
+    requirement_name_regex = "[^a-zA-Z0-9-_\[\]]"
 
     in_file_path = file_dir / f"{file_name_base}.in"
     txt_file = file_dir / f"{file_name_base}.txt"

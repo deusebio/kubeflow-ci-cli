@@ -355,7 +355,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
             tox_ini_parser.set(
                 section_name,
                 "description",
-                "Update requirements including those in subdirs"
+                "Update requirements" + (", including those in subcharm folders" if are_there_subcharms else "")
             )
             if are_there_subcharms:
                 tox_ini_parser.set(section_name, "allowlist_externals", "find")

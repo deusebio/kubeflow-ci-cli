@@ -380,7 +380,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
                     updated_lines.append(lines[line_index])
                     line_index += 1
                 updated_lines[-1] = f"{updated_lines[-1][:-1]} \\\n"
-                updated_lines.append("--skip {toxinidir}/./poetry.lock\n")
+                updated_lines.append("--skip *.lock\n")
                 while line_index < len(lines):
                     updated_lines.append(lines[line_index])
                     line_index += 1

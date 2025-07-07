@@ -89,7 +89,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
         copy(contributing_file_path_from_script, contributing_file_path_in_repo)
     else:
         with open(contributing_file_path_from_script, "r") as source_file:
-            with open(contributing_file_path_in_repo, "w") as preexisting_target_file:
+            with open(contributing_file_path_in_repo, "a") as preexisting_target_file:
                 preexisting_target_file.write("\n\n")
                 preexisting_target_file.write(source_file.read())
     if repo.is_dirty():

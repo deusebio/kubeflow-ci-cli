@@ -95,14 +95,16 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     if repo.is_dirty():
         repo.update_branch(commit_msg=commit_message, directory=".", push=not dry_run, force=True)
 
-    commit_message = "ci: update tox installation and checkout actions"
+    commit_message = "ci: update checkout actions, tox installation and TIOBE schedule"
     logger.info(f"\timplementing commit '{commit_message}'")
     for ci_file_path in (repo.base_path / ".github" / "workflows").glob("*.yaml"):
+        is_it_the_tiobe_workflow = "tiobe" in ci_file_path
         with open(ci_file_path, "r") as file:
             file_content = file.read()
         updated_file_content = update_tox_installation_and_checkout_actions(
             content=file_content,
-            skip_tox="tiobe" not in ci_file_path
+            install_pipx_beforehand=is_it_the_tiobe_workflow,
+            remove_on_pull_request=is_it_the_tiobe_workflow
         )
         with open(ci_file_path, "w") as file:
             file.write(updated_file_content)
@@ -425,14 +427,35 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
     return poetry_group_names_to_versioned_requirements
 
 
-def update_tox_installation_and_checkout_actions(content: str, skip_tox: bool) -> str:
-    if not skip_tox:
-        content = content.replace("pip install tox", "pipx install tox")
-    return (
-        content
-        .replace("actions/checkout@v2", "actions/checkout@v4")
-        .replace("actions/checkout@v3", "actions/checkout@v4")
-    )
+def update_tox_installation_and_checkout_actions(content: str, install_pipx: bool, remove_on_pull_request: bool) -> str:
+    # TODO: improve time complexity with more of an efficient implementation
+
+    updated_lines = []
+
+    for line in content.splitlines():
+        if "pip install pylint flake8" in processed_line:
+            continue
+
+        if remove_on_pull_request and line.strip() == "pull_request:":
+            continue
+
+        processed_line = (
+            line
+            .replace("pip install tox", "pipx install tox")
+            .replace("actions/checkout@v2", "actions/checkout@v4")
+            .replace("actions/checkout@v3", "actions/checkout@v4")
+        )
+
+        if install_pipx:
+            if "pipx install tox" in processed_line:
+                n_trailing_whitespaces = 0
+                while processed_line[n_trailing_whitespaces] == " ":
+                    n_trailing_whitespaces += 1
+                updated_lines.append(" " * n_trailing_whitespaces + "sudo apt install pipx")
+
+        updated_lines.append(processed_line)
+
+    return "\n".join(updated_lines)
 
 
 if __name__ == "__main__":

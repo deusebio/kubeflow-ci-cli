@@ -98,12 +98,12 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     commit_message = "ci: update checkout actions, tox installation and TIOBE schedule"
     logger.info(f"\timplementing commit '{commit_message}'")
     for ci_file_path in (repo.base_path / ".github" / "workflows").glob("*.yaml"):
-        is_it_the_tiobe_workflow = "tiobe" in ci_file_path
+        is_it_the_tiobe_workflow = "tiobe" in str(ci_file_path)
         with open(ci_file_path, "r") as file:
             file_content = file.read()
         updated_file_content = update_tox_installation_and_checkout_actions(
             content=file_content,
-            install_pipx_beforehand=is_it_the_tiobe_workflow,
+            install_pipx=is_it_the_tiobe_workflow,
             remove_on_pull_request=is_it_the_tiobe_workflow
         )
         with open(ci_file_path, "w") as file:
@@ -433,7 +433,7 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
     updated_lines = []
 
     for line in content.splitlines():
-        if "pip install pylint flake8" in processed_line:
+        if "pip install pylint flake8" in line:
             continue
 
         if remove_on_pull_request and line.strip() == "pull_request:":

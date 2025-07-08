@@ -474,6 +474,8 @@ def update_tox_installation_and_checkout_actions(
 
         updated_lines.append(processed_line)
 
+    updated_lines.append("")
+
     return "\n".join(updated_lines)
 
 

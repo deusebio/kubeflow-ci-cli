@@ -1,7 +1,6 @@
 ## How to Manage Python Dependencies and Environments
 
 
-
 ### Prerequisites
 
 `tox` is the only tool required locally, as `tox` internally installs and uses `poetry`, be it to manage Python dependencies or to run `tox` environments. To install it: `pipx install tox`.

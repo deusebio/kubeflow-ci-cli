@@ -1,6 +1,12 @@
 ## How to Manage Python Dependencies and Environments
 
-`tox` is the only tool required locally, as `tox` internally installs and uses `poetry`, be it to manage Python dependencies or to run `tox` environments. Optionally, `poerty` can be additionally installed independently just for the sake of running Python commands locally outside of `tox` during debugging/development. Refer to the respective official docs for [installing poetry](https://python-poetry.org/docs/#installation) and [installing tox](https://tox.wiki/en/latest/installation.html).
+
+
+### Prerequisites
+
+`tox` is the only tool required locally, as `tox` internally installs and uses `poetry`, be it to manage Python dependencies or to run `tox` environments. To install it: `pipx install tox`.
+
+Optionally, `poerty` can be additionally installed independently just for the sake of running Python commands locally outside of `tox` during debugging/development. To install it: `pipx install poetry`.
 
 
 ### Updating Dependencies
@@ -20,12 +26,12 @@ To add/update/remove any dependencies and/or to upgrade Python, simply:
 
 ### Running `tox` Environments
 
-To run `tox` environments locally, ensure to have `tox` installed first and then simply run your `tox` environments natively (e.g.: `tox -e lint`). `tox` will internally first install `poetry` and then rely on it to install and run its environments.
+To run `tox` environments, either locally for development or in CI workflows for testing, ensure to have `tox` installed first and then simply run your `tox` environments natively (e.g.: `tox -e lint`). `tox` will internally first install `poetry` and then rely on it to install and run its environments.
 
 
 ### Running Python Environments
 
-To run Python commands locally from any environments built from any combinations of dependency groups without relying on `tox`:
+To run Python commands locally for debugging/development from any environments built from any combinations of dependency groups without relying on `tox`:
 1. ensure you have `poetry` installed
 2. install any required dependency groups: `poetry install --only <your-group-a>,<your-group-b>` (or all groups, if you prefer: `poetry install --all-groups`)
 3. run Python commands via poetry: `poetry run python3 <your-command>`

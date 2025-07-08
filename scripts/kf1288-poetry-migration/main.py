@@ -161,6 +161,7 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
                     requirement_name_end_character_index = first_match_not_composing_requirement_name.start()
                     requirement = line[:requirement_name_end_character_index].lower()
                     version_constraint = line[requirement_name_end_character_index:].strip()
+                    version_constraint = version_constraint.replace(" ", "")
                     requirements_to_version_contraints[requirement] = version_constraint
             elif line.startswith("-r"):
                 dependency_group = line.strip().split()[1].split(".")[0].replace(f"{REQUIREMENTS_FILE_NAME_BASE}", "")
@@ -184,6 +185,7 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
                 requirement_name_end_character_index = search(requirement_name_regex, line).start()
                 requirement = line[:requirement_name_end_character_index]
                 version = line[requirement_name_end_character_index + 2:]  # excluding "=="
+                version = version.replace(" ", "")
                 if requirement in unversioned_requirements:
                     unversioned_requirements.remove(requirement)
                     requirements_to_version_contraints[requirement] = f"^{version}"  # caret pinning

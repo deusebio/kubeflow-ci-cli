@@ -1,7 +1,7 @@
 from configparser import ConfigParser, NoOptionError
 from collections import OrderedDict
 from json import loads as json_loads
-from os import remove
+from os import getenv, remove
 from os.path import abspath, dirname, exists, join
 from pathlib import Path
 from re import search
@@ -24,11 +24,11 @@ from kfcicli.main import (
 from kfcicli.utils import setup_logging
 
 
-PATH_FOR_MODIFIED_CHARMCRAFT_LINES = Path("modified_charmcraft_lines")
-PATH_FOR_GITHUB_CREDENTIALS = "./credentials.json"
-PATH_FOR_MODIFIED_REPOSITORIES = Path("/home/mattia/Desktop/canonical/temp")
-PATH_FOR_PULL_REQUEST_BODY_TEMPLATE = "./pull_request_body_template.md"
-PATH_FOR_REPOSITORY_LIST = Path("../../presets/kubeflow-repos.yaml")
+PATH_FOR_MODIFIED_CHARMCRAFT_LINES = Path(getenv("PATH_FOR_MODIFIED_CHARMCRAFT_LINES", "modified_charmcraft_lines"))
+PATH_FOR_GITHUB_CREDENTIALS = getenv("PATH_FOR_GITHUB_CREDENTIALS", "./credentials.json")
+PATH_FOR_MODIFIED_REPOSITORIES = getenv("PATH_FOR_MODIFIED_REPOSITORIES", Path("/home/mattia/Desktop/canonical/temp"))
+PATH_FOR_PULL_REQUEST_BODY_TEMPLATE = getenv("PATH_FOR_PULL_REQUEST_BODY_TEMPLATE", "./pull_request_body_template.md")
+PATH_FOR_REPOSITORY_LIST = Path(getenv("PATH_FOR_REPOSITORY_LIST", "../../presets/kubeflow-repos.yaml"))
 PATH_FOR_THIS_SCRIPT_SUBFOLDER = Path(__file__).parent
 
 ENVIRONMENT_NAME_FOR_CHARM = "charm"

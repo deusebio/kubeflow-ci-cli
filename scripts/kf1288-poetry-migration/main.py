@@ -100,7 +100,10 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
     for ci_file_path in (repo.base_path / ".github" / "workflows").glob("*.yaml"):
         with open(ci_file_path, "r") as file:
             file_content = file.read()
-        updated_file_content = update_tox_installation_and_checkout_actions(content=file_content)
+        updated_file_content = update_tox_installation_and_checkout_actions(
+            content=file_content,
+            skip_tox="tiobe" not in ci_file_path
+        )
         with open(ci_file_path, "w") as file:
             file.write(updated_file_content)
     if repo.is_dirty():
@@ -422,12 +425,13 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
     return poetry_group_names_to_versioned_requirements
 
 
-def update_tox_installation_and_checkout_actions(content: str) -> str:
+def update_tox_installation_and_checkout_actions(content: str, skip_tox: bool) -> str:
+    if not skip_tox:
+        content = content.replace("pip install tox", "pipx install tox")
     return (
         content
         .replace("actions/checkout@v2", "actions/checkout@v4")
         .replace("actions/checkout@v3", "actions/checkout@v4")
-        .replace("pip install tox", "pipx install tox")
     )
 
 

@@ -104,7 +104,8 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
         updated_file_content = update_tox_installation_and_checkout_actions(
             content=file_content,
             install_pipx=is_it_the_tiobe_workflow,
-            remove_on_pull_request=is_it_the_tiobe_workflow
+            remove_on_pull_request=is_it_the_tiobe_workflow,
+            remove_python_setup=is_it_the_tiobe_workflow
         )
         with open(ci_file_path, "w") as file:
             file.write(updated_file_content)
@@ -429,16 +430,32 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
     return poetry_group_names_to_versioned_requirements
 
 
-def update_tox_installation_and_checkout_actions(content: str, install_pipx: bool, remove_on_pull_request: bool) -> str:
+def update_tox_installation_and_checkout_actions(
+    content: str,
+    install_pipx: bool,
+    remove_on_pull_request: bool,
+    remove_python_setup: bool
+) -> str:
     # TODO: improve time complexity with more of an efficient implementation
 
     updated_lines = []
+    n_subsequent_lines_to_skip = 0
 
     for line in content.splitlines():
+        if n_subsequent_lines_to_skip > 0:
+            if n_subsequent_lines_to_skip == 1:
+                assert not line.strip()  # it has to be the newline at the end of the block
+            n_subsequent_lines_to_skip -= 1
+            continue
+
         if "pip install pylint flake8" in line:
             continue
 
         if remove_on_pull_request and line.strip() == "pull_request:":
+            continue
+
+        if remove_python_setup and "- name: Set up Python" in line:
+            n_subsequent_lines_to_skip = 4
             continue
 
         processed_line = (

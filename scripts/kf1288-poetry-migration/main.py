@@ -198,6 +198,13 @@ def read_versioned_requirements_and_remove_files(file_dir: Path, file_name_base:
     return requirements_to_version_contraints, nested_dependency_groups
 
 
+def replicate_initial_indentation(line: str) -> int:
+    n_trailing_whitespaces = 0
+    while line[n_trailing_whitespaces] == " ":
+        n_trailing_whitespaces += 1
+    return = " " * n_trailing_whitespaces
+
+
 def update_charmcraft(_dir: Path) -> None:
     charmcraft_path = _dir / "charmcraft.yaml"
 
@@ -446,7 +453,7 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
             .replace(
                 "pip install tox",
                 "pipx install tox" + (
-                    " --python /usr/bin/python3.12" if install_pipx else ""
+                    """ --python '${{ steps.pysetup.outputs.python-path }}'""" if install_pipx else ""
                 )
             )
             .replace("actions/checkout@v2", "actions/checkout@v4")
@@ -454,11 +461,12 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
         )
 
         if install_pipx:
+            if "actions/setup-python" in processed_line:
+                indentation = replicate_initial_indentation(processed_line)
+                updated_lines.append(indentation + "id: pysetup")
+
             if "pipx install tox" in processed_line:
-                n_trailing_whitespaces = 0
-                while processed_line[n_trailing_whitespaces] == " ":
-                    n_trailing_whitespaces += 1
-                indentation = " " * n_trailing_whitespaces
+                indentation = replicate_initial_indentation(processed_line)
                 updated_lines.append(indentation + "sudo apt install -y pipx")
                 updated_lines.append(indentation + "pipx ensurepath")
 

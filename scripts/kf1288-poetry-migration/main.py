@@ -470,7 +470,8 @@ def update_tox_installation_and_checkout_actions(
                 n_trailing_whitespaces = 0
                 while processed_line[n_trailing_whitespaces] == " ":
                     n_trailing_whitespaces += 1
-                updated_lines.append(" " * n_trailing_whitespaces + "sudo apt install pipx")
+                updated_lines.append(" " * n_trailing_whitespaces + "sudo apt install -y pipx")
+                updated_lines.append(" " * n_trailing_whitespaces + "pipx ensurepath")
 
         updated_lines.append(processed_line)
 

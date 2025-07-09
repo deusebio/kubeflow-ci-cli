@@ -453,21 +453,19 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
                     """ --python '${{ steps.pysetup.outputs.python-path }}'""" if install_pipx else ""
                 ) + " tox"
             )
+            .replace(
+                "pip install pylint flake8",
+                """pipx install --python '${{ steps.pysetup.outputs.python-path }}' pylint flake8"""
+            )
             .replace("actions/checkout@v2", "actions/checkout@v4")
             .replace("actions/checkout@v3", "actions/checkout@v4")
         )
 
         if install_pipx:
-            if "pip install pylint flake8" in processed_line:
-                processed_line = (
-                    replicate_initial_indentation(processed_line) +
-                    """pipx install --python '${{ steps.pysetup.outputs.python-path }}' pylint flake8"""
-                )
-
             if "actions/setup-python" in processed_line:
                 updated_lines.append(replicate_initial_indentation(processed_line) + "id: pysetup")
 
-            if "pipx install tox" in processed_line:
+            if "pipx install" in processed_line and "tox" in processed_line:
                 indentation = replicate_initial_indentation(processed_line)
                 updated_lines.append(indentation + "sudo apt install -y pipx")
                 updated_lines.append(indentation + "pipx ensurepath")

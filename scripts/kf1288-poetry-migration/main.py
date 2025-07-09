@@ -202,7 +202,7 @@ def replicate_initial_indentation(line: str) -> int:
     n_trailing_whitespaces = 0
     while line[n_trailing_whitespaces] == " ":
         n_trailing_whitespaces += 1
-    return = " " * n_trailing_whitespaces
+    return " " * n_trailing_whitespaces
 
 
 def update_charmcraft(_dir: Path) -> None:

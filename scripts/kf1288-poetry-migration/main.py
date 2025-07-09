@@ -97,10 +97,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
 
     commit_message = "ci: update checkout actions, tox installation and TIOBE schedule"
     logger.info(f"\timplementing commit '{commit_message}'")
-    for ci_file_path in (
-        (repo.base_path / ".github" / "workflows").glob("*.yaml") +
-        (repo.base_path / ".github" / "workflows").glob("*.yml")
-    ):
+    for ci_file_path in (repo.base_path / ".github" / "workflows").glob("*.y*ml"):
         is_it_the_tiobe_workflow = "tiobe" in str(ci_file_path)
         with open(ci_file_path, "r") as file:
             file_content = file.read()

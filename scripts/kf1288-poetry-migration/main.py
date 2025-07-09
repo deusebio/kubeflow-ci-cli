@@ -443,7 +443,12 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
 
         processed_line = (
             line
-            .replace("pip install tox", "pipx install tox")
+            .replace(
+                "pip install tox",
+                "pipx install tox" + (
+                    " --python /usr/bin/python3.12" if install_pipx else ""
+                )
+            )
             .replace("actions/checkout@v2", "actions/checkout@v4")
             .replace("actions/checkout@v3", "actions/checkout@v4")
         )
@@ -453,8 +458,9 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
                 n_trailing_whitespaces = 0
                 while processed_line[n_trailing_whitespaces] == " ":
                     n_trailing_whitespaces += 1
-                updated_lines.append(" " * n_trailing_whitespaces + "sudo apt install -y pipx")
-                updated_lines.append(" " * n_trailing_whitespaces + "pipx ensurepath")
+                indentation = " " * n_trailing_whitespaces
+                updated_lines.append(indentation + "sudo apt install -y pipx")
+                updated_lines.append(indentation + "pipx ensurepath")
 
         updated_lines.append(processed_line)
 

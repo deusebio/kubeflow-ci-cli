@@ -468,14 +468,8 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
 
             if "pip install pylint flake8" in processed_line:
                 indentation = replicate_initial_indentation(processed_line)
-                updated_lines.append(
-                    indentation +
-                    """pipx install --python '${{ steps.pysetup.outputs.python-path }}' flake8"""
-                )
-                processed_line = (
-                    indentation +
-                    """pipx install --python '${{ steps.pysetup.outputs.python-path }}' pylint"""
-                )
+                updated_lines.append(indentation + """pipx install flake8""")
+                processed_line = indentation + """pipx install pylint"""
 
         updated_lines.append(processed_line)
 

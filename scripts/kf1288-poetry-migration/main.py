@@ -442,9 +442,6 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
     updated_lines = []
 
     for line in content.splitlines():
-        if "pip install pylint flake8" in line:
-            continue
-
         if remove_on_pull_request and line.strip() == "pull_request:":
             continue
 
@@ -452,15 +449,19 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
             line
             .replace(
                 "pip install tox",
-                "pipx install tox" + (
+                "pipx install" + (
                     """ --python '${{ steps.pysetup.outputs.python-path }}'""" if install_pipx else ""
-                )
+                ) + " tox"
             )
             .replace("actions/checkout@v2", "actions/checkout@v4")
             .replace("actions/checkout@v3", "actions/checkout@v4")
         )
 
         if install_pipx:
+            if "pip install pylint flake8" in processed_line:
+                indentation = replicate_initial_indentation(processed_line)
+                processed_line = """pipx install --python '${{ steps.pysetup.outputs.python-path }}' pylint flake8"""
+
             if "actions/setup-python" in processed_line:
                 indentation = replicate_initial_indentation(processed_line)
                 updated_lines.append(indentation + "id: pysetup")

@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from configparser import ConfigParser, NoOptionError
 from collections import OrderedDict
 from json import loads as json_loads
@@ -24,16 +25,39 @@ from kfcicli.main import (
 from kfcicli.utils import setup_logging
 
 
-PATH_FOR_MODIFIED_CHARMCRAFT_LINES = Path(getenv("PATH_FOR_MODIFIED_CHARMCRAFT_LINES", "modified_charmcraft_lines"))
-PATH_FOR_GITHUB_CREDENTIALS = getenv("PATH_FOR_GITHUB_CREDENTIALS", "./credentials.json")
-PATH_FOR_MODIFIED_REPOSITORIES = getenv("PATH_FOR_MODIFIED_REPOSITORIES", Path("/home/mattia/Desktop/canonical/temp"))
-PATH_FOR_PULL_REQUEST_BODY_TEMPLATE = getenv("PATH_FOR_PULL_REQUEST_BODY_TEMPLATE", "./pull_request_body_template.md")
-PATH_FOR_REPOSITORY_LIST = Path(getenv("PATH_FOR_REPOSITORY_LIST", "../../presets/kubeflow-repos.yaml"))
+argument_parser = ArgumentParser()
+
+argument_parser.add_argument(
+    "--credentials",
+    required=False,
+    default="./credentials.json",
+    help="Path to the file containint the required GitHub credentials"
+)
+argument_parser.add_argument(
+    "--modified-repo-dir",
+    required=False,
+    default="/home/mattia/Desktop/canonical/temp",
+    help="Path to the directory where repositories and cloned and modified"
+)
+argument_parser.add_argument(
+    "--repo-list",
+    required=False,
+    default="../../presets/kubeflow-repos.yaml",
+    help="Path to the file listing the repositories and their charms"
+)
+
+script_arguments = argument_parser.parse_args()
+
+PATH_FOR_GITHUB_CREDENTIALS = script_arguments.credentials
+PATH_FOR_MODIFIED_REPOSITORIES = Path(script_arguments.modified_repo_dir)
+PATH_FOR_REPOSITORY_LIST = Path(script_arguments.repo_list)
 PATH_FOR_THIS_SCRIPT_SUBFOLDER = Path(__file__).parent
 
 ENVIRONMENT_NAME_FOR_CHARM = "charm"
 ENVIRONMENT_NAME_FOR_UNIT_TESTING = "unit"
 ENVIRONMENT_NAME_FOR_UPDATE_REQUIREMENTS = "update-requirements"
+PATH_FOR_PULL_REQUEST_BODY_TEMPLATE = PATH_FOR_THIS_SCRIPT_SUBFOLDER / "pull_request_body_template.md"
+PATH_FOR_MODIFIED_CHARMCRAFT_LINES = PATH_FOR_THIS_SCRIPT_SUBFOLDER / "modified_charmcraft_lines"
 REQUIREMENTS_FILE_NAME_BASE = "requirements"
 
 

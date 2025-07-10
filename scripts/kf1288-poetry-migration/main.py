@@ -27,30 +27,35 @@ from kfcicli.utils import setup_logging
 
 argument_parser = ArgumentParser()
 
+home_folder = getenv("HOME", "/home/ubuntu")
+argument_parser.add_argument(
+    "input",
+    help="Input file to get the list of repos"
+)
+argument_parser.add_argument(
+    "--base-path",
+    required=False,
+    default=f"{home_folder}/.kfcicli/",
+    help="Base path where to store all repositories"
+)
 argument_parser.add_argument(
     "--credentials",
     required=False,
-    default="./credentials.json",
-    help="Path to the file containint the required GitHub credentials"
+    default=f"{home_folder}/.kfcicli/credentials.json",
+    help="File holding the credentials for Github"
 )
 argument_parser.add_argument(
-    "--modified-repo-dir",
+    "--log-level",
     required=False,
-    default="/home/mattia/Desktop/canonical/temp",
-    help="Path to the directory where repositories and cloned and modified"
-)
-argument_parser.add_argument(
-    "--repo-list",
-    required=False,
-    default="../../presets/kubeflow-repos.yaml",
-    help="Path to the file listing the repositories and their charms"
+    default="INFO",
+    help="log level to be used"
 )
 
 script_arguments = argument_parser.parse_args()
 
 PATH_FOR_GITHUB_CREDENTIALS = script_arguments.credentials
-PATH_FOR_MODIFIED_REPOSITORIES = Path(script_arguments.modified_repo_dir)
-PATH_FOR_REPOSITORY_LIST = Path(script_arguments.repo_list)
+PATH_FOR_MODIFIED_REPOSITORIES = Path(script_arguments.base_path)
+PATH_FOR_REPOSITORY_LIST = Path(script_arguments.input)
 PATH_FOR_THIS_SCRIPT_SUBFOLDER = Path(__file__).parent
 
 ENVIRONMENT_NAME_FOR_CHARM = "charm"
@@ -61,7 +66,7 @@ PATH_FOR_MODIFIED_CHARMCRAFT_LINES = PATH_FOR_THIS_SCRIPT_SUBFOLDER / "modified_
 REQUIREMENTS_FILE_NAME_BASE = "requirements"
 
 
-logger = setup_logging(log_level="INFO", logger_name=__name__)
+logger = setup_logging(log_level=script_arguments.log_level, logger_name=__name__)
 
 
 def main() -> None:

@@ -103,7 +103,7 @@ def process_repository(repo: Client, charms: list[LocalCharmRepo], dry_run: bool
             file_content = file.read()
         updated_file_content = update_tox_installation_and_checkout_actions(
             content=file_content,
-            install_pipx=is_it_the_tiobe_workflow,
+            install_via_pipx=not is_it_the_tiobe_workflow,
             remove_on_pull_request=is_it_the_tiobe_workflow
         )
         with open(ci_file_path, "w") as file:
@@ -436,7 +436,7 @@ def update_tox_ini(_dir: Path, are_there_subcharms: bool) -> OrderedDict[str, Di
     return poetry_group_names_to_versioned_requirements
 
 
-def update_tox_installation_and_checkout_actions(content: str, install_pipx: bool, remove_on_pull_request: bool) -> str:
+def update_tox_installation_and_checkout_actions(content: str, install_via_pipx: bool, remove_on_pull_request: bool) -> str:
     # TODO: improve time complexity with more of an efficient implementation
 
     updated_lines = []
@@ -447,24 +447,12 @@ def update_tox_installation_and_checkout_actions(content: str, install_pipx: boo
 
         processed_line = (
             line
-            .replace(
-                "pip install tox",
-                "pipx install" + (
-                    """ --python '${{ steps.pysetup.outputs.python-path }}'""" if install_pipx else ""
-                ) + " tox"
-            )
             .replace("actions/checkout@v2", "actions/checkout@v4")
             .replace("actions/checkout@v3", "actions/checkout@v4")
         )
 
-        if install_pipx:
-            if "actions/setup-python" in processed_line:
-                updated_lines.append(replicate_initial_indentation(processed_line) + "id: pysetup")
-
-            if "pipx install" in processed_line and "tox" in processed_line:
-                indentation = replicate_initial_indentation(processed_line)
-                updated_lines.append(indentation + "sudo apt install -y pipx")
-                updated_lines.append(indentation + "pipx ensurepath")
+        if install_via_pipx:
+            processed_line = processed_line.replace("pip install tox", "pipx install tox")
 
         updated_lines.append(processed_line)
 

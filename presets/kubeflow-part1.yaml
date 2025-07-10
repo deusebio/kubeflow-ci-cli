@@ -1,0 +1,84 @@
+- branch: main
+  charms:
+  - name: admission_webhook
+    path: .
+  url: https://github.com/canonical/admission-webhook-operator
+- branch: main
+  charms:
+  - name: argo_controller
+    path: charms/argo-controller
+  url: https://github.com/canonical/argo-operators
+- branch: main
+  charms:
+  - name: dex_auth
+    path: .
+  url: https://github.com/canonical/dex-auth-operator
+- branch: main
+  charms:
+  - name: envoy
+    path: .
+  url: https://github.com/canonical/envoy-operator
+- branch: main
+  charms:
+  - name: github_profiles_automator
+    path: .
+  url: https://github.com/canonical/github-profiles-automator
+- branch: main
+  charms:
+  - name: istio_gateway
+    path: charms/istio-gateway
+  - name: istio_pilot
+    path: charms/istio-pilot
+  url: https://github.com/canonical/istio-operators
+- branch: main
+  charms:
+  - name: katib_controller
+    path: charms/katib-controller
+  - name: katib_db_manager
+    path: charms/katib-db-manager
+  - name: katib_ui
+    path: charms/katib-ui
+  url: https://github.com/canonical/katib-operators
+- branch: main
+  charms:
+  - name: kfp_api
+    path: charms/kfp-api
+  - name: kfp_metadata_writer
+    path: charms/kfp-metadata-writer
+  - name: kfp_persistence
+    path: charms/kfp-persistence
+  - name: kfp_profile_controller
+    path: charms/kfp-profile-controller
+  - name: kfp_schedwf
+    path: charms/kfp-schedwf
+  - name: kfp_ui
+    path: charms/kfp-ui
+  - name: kfp_viewer
+    path: charms/kfp-viewer
+  - name: kfp_viz
+    path: charms/kfp-viz
+  url: https://github.com/canonical/kfp-operators
+- branch: main
+  charms:
+  - name: knative_eventing
+    path: charms/knative-eventing
+  - name: knative_operator
+    path: charms/knative-operator
+  - name: knative_serving
+    path: charms/knative-serving
+  url: https://github.com/canonical/knative-operators
+- branch: main
+  charms:
+  - name: kserve_controller
+    path: charms/kserve-controller
+  url: https://github.com/canonical/kserve-operators
+- branch: main
+  charms:
+  - name: kubeflow_dashboard
+    path: .
+  url: https://github.com/canonical/kubeflow-dashboard-operator
+- branch: main
+  charms:
+  - name: kubeflow_profiles
+    path: .
+  url: https://github.com/canonical/kubeflow-profiles-operator

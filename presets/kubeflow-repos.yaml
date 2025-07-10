@@ -138,11 +138,6 @@
   url: https://github.com/canonical/resource-dispatcher
 - branch: main
   charms:
-  - name: minio
-    path: .
-  url: https://github.com/canonical/minio-operator
-- branch: main
-  charms:
   - name: mlflow_server
     path: .
   url: https://github.com/canonical/mlflow-operator
@@ -156,3 +151,13 @@
   - name: namespace_node_affinity
     path: .
   url: https://github.com/canonical/namespace-node-affinity-operator
+- branch: main
+  charms:
+  - name: mlops_libs
+    path: .
+  url: https://github.com/canonical/mlops-libs
+- branch: main
+  charms:
+  - name: ngc_integrator_operator
+    path: .
+  url: https://github.com/canonical/ngc-integrator-operator

@@ -1,0 +1,65 @@
+- branch: main
+  charms:
+  - name: istio_gateway
+    path: charms/istio-gateway
+  - name: istio_pilot
+    path: charms/istio-pilot
+  url: https://github.com/canonical/istio-operators
+- branch: main
+  charms:
+  - name: katib_controller
+    path: charms/katib-controller
+  - name: katib_db_manager
+    path: charms/katib-db-manager
+  - name: katib_ui
+    path: charms/katib-ui
+  url: https://github.com/canonical/katib-operators
+- branch: main
+  charms:
+  - name: kfp_api
+    path: charms/kfp-api
+  - name: kfp_metadata_writer
+    path: charms/kfp-metadata-writer
+  - name: kfp_persistence
+    path: charms/kfp-persistence
+  - name: kfp_profile_controller
+    path: charms/kfp-profile-controller
+  - name: kfp_schedwf
+    path: charms/kfp-schedwf
+  - name: kfp_ui
+    path: charms/kfp-ui
+  - name: kfp_viewer
+    path: charms/kfp-viewer
+  - name: kfp_viz
+    path: charms/kfp-viz
+  url: https://github.com/canonical/kfp-operators
+- branch: main
+  charms:
+  - name: knative_eventing
+    path: charms/knative-eventing
+  - name: knative_operator
+    path: charms/knative-operator
+  - name: knative_serving
+    path: charms/knative-serving
+  url: https://github.com/canonical/knative-operators
+- branch: main
+  charms:
+  - name: tensorboard_controller
+    path: charms/tensorboard-controller
+  - name: tensorboards_web_app
+    path: charms/tensorboards-web-app
+  url: https://github.com/canonical/kubeflow-tensorboards-operator
+- branch: main
+  charms:
+  - name: jupyter_controller
+    path: charms/jupyter-controller
+  - name: jupyter_ui
+    path: charms/jupyter-ui
+  url: https://github.com/canonical/notebook-operators
+- branch: main
+  charms:
+  - name: feast_integrator
+    path: charms/feast-integrator
+  - name: feast_ui
+    path: charms/feast-ui
+  url: https://github.com/canonical/feast-operators

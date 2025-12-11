@@ -70,24 +70,64 @@ class TagMetadata:
     architecture: list[str]
 
 
-def parse_row(input_json: dict):
-    return TagMetadata(
-        name=input_json["name"],
-        last_update=datetime.fromisoformat(input_json["last_updated"]),
-        status=input_json["tag_status"],
-        architecture=[version["architecture"] for version in input_json["images"]]
-    )
+from abc import ABC, abstractmethod
 
-def get_tags(image_reference: ImageReference) -> list[TagMetadata]:
-    urls = {
-        Platforms.DOCKER: "https://registry.hub.docker.com"
-    }
+class ContainerRegisty(ABC):
+    @abstractmethod
+    def parse_row(self, input_json: dict) -> TagMetadata:
+        pass
 
-    url = f"{urls.get(image_reference.platform)}/v2/repositories/{image_reference.namespace}/{image_reference.name}/tags/"
+    @abstractmethod
+    def get_tags(self, image_reference: ImageReference) -> list[TagMetadata]:
+        pass
 
-    response = requests.get(url)
+class DockerHub(ContainerRegisty):
 
-    return [
-        parse_row(input_json=item) for item in response.json()["results"]
-    ]
+    def __init__(self, url="https://registry.hub.docker.com"):
+        self.url = url
 
+    def parse_row(self, input_json: dict):
+        return TagMetadata(
+            name=input_json["name"],
+            last_update=datetime.fromisoformat(input_json["last_updated"]),
+            status=input_json["tag_status"],
+            architecture=[version["architecture"] for version in input_json["images"]]
+        )
+
+    def get_tags(self, image_reference: ImageReference) -> list[TagMetadata]:
+
+        url = f"{self.url}/v2/repositories/{image_reference.namespace}/{image_reference.name}/tags/"
+
+        response = requests.get(url)
+
+        return [
+            self.parse_row(input_json=item) for item in response.json()["results"]
+        ]
+
+class GHCR(ContainerRegisty):
+
+    def __init__(self, token: str, url = "https://api.github.com"):
+        self.token = token
+        self.url = url
+
+    def parse_row(self, input_json: dict):
+        return TagMetadata(
+            name=input_json["name"],
+            last_update=datetime.fromisoformat(input_json["updated_at"]),
+            status="active",
+            architecture=["amd64"]
+        )
+
+    def get_tags(self, image_reference: ImageReference) -> list[TagMetadata]:
+
+        url = f"{self.url}/orgs/{image_reference.namespace}/packages/container/{image_reference.name}/versions"
+
+        response = requests.get(url, headers={
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28"
+        })
+
+        return [
+            self.parse_row(input_json=item) for item in response.json()
+        ]

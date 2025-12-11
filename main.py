@@ -7,22 +7,25 @@ import json
 
 setup_logging(log_level="INFO")
 
-with open("credentials.json", "r") as fid:
+with open("/home/deusebio/.kfcicli/credentials.json", "r") as fid:
     credentials = GitCredentials(**json.loads(fid.read()))
 
 tmp_folder = "/home/deusebio/tmp/kfcicli"
 
-modules = [
-    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
-   Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
-   Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
-]
+# modules = [
+#     Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow/applications.tf"),
+#    Path(f"{tmp_folder}/charmed-kubeflow-solutions/modules/kubeflow-mlflow/main.tf"),
+#    Path(f"{tmp_folder}/charmed-mlflow-solutions/modules/mlflow/applications.tf")
+# ]
+#
+# client = KubeflowCI.from_tf_modules(
+#     modules=modules,
+#     base_path=Path(f"{tmp_folder}/charm_repos"),
+#     credentials=credentials
+# )
 
-client = KubeflowCI.from_tf_modules(
-    modules=modules,
-    base_path=Path(f"{tmp_folder}/charm_repos"),
-    credentials=credentials
-)
+client = KubeflowCI.read(Path("./presets/release-1.10.yaml"), Path(f"{tmp_folder}/charm_repos"), credentials=credentials)
+
 
 # client.dump("presets/release-1.10.yaml")
 

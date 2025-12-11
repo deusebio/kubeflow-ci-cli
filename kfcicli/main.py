@@ -11,7 +11,7 @@ from prettytable import PrettyTable
 
 from kfcicli.charms import CharmRepo, LocalCharmRepo
 from kfcicli.charms import parse_repos_from_path, parse_repos_from_module
-from kfcicli.images import ImageReference, get_tags
+from kfcicli.images import ImageReference, DockerHub, GHCR, Platforms
 from kfcicli.metadata import InputError, get as get_metadata, SourceMetadata
 from kfcicli.repository import Client, create_repository_client_from_url, \
     GitCredentials
@@ -284,14 +284,24 @@ class KubeflowCI(WithLogging):
         table = PrettyTable()
         table.field_names = ["repo", "charm", "docs", "image", "current_tag", "last_tag"]
 
+        registries = {
+            Platforms.DOCKER: DockerHub(),
+            Platforms.GITHUB: GHCR(token=self.credentials.access_token)
+        }
+
         for kubeflow_repo in self.repos:
             repo, charms = kubeflow_repo.repository, kubeflow_repo.charms
             for charm in charms:
+                if "oci-image" not in charm.metadata.resources:
+                    continue
+
                 ref = ImageReference.parse(charm.metadata.resources["oci-image"])
 
                 current_tag = ref.tag
-                last_tag = sorted(get_tags(ref), key=lambda tag: tag.last_update)[
-                    -1]
+                last_tag = sorted(
+                    registries[ref.platform].get_tags(ref),
+                    key=lambda tag: tag.last_update
+                )[-1]
 
                 table.add_row([
                     repo._git_repo.remote().url,

@@ -1,0 +1,15 @@
+- branch: 3/edge
+  charms:
+  - name: history_server
+    path: .
+  url: https://github.com/canonical/spark-history-server-k8s-operator
+- branch: 3.5/edge
+  charms:
+  - name: kyuubi
+    path: .
+  url: https://github.com/canonical/kyuubi-k8s-operator
+- branch: 3/edge
+  charms:
+  - name: hub
+    path: .
+  url: https://github.com/canonical/spark-integration-hub-k8s-operator

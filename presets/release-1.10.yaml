@@ -3,7 +3,7 @@
   - name: admission_webhook
     path: .
   url: https://github.com/canonical/admission-webhook-operator
-- branch: track/3.4
+- branch: track/3.5
   charms:
   - name: argo_controller
     path: charms/argo-controller
@@ -41,7 +41,7 @@
   - name: katib_ui
     path: charms/katib-ui
   url: https://github.com/canonical/katib-operators
-- branch: track/2.4
+- branch: track/2.5
   charms:
   - name: kfp_api
     path: charms/kfp-api
@@ -136,12 +136,12 @@
   - name: resource_dispatcher
     path: .
   url: https://github.com/canonical/resource-dispatcher
-- branch: track/ckf-1.9
+- branch: track/ckf-1.10
   charms:
   - name: minio
     path: .
   url: https://github.com/canonical/minio-operator
-- branch: track/2.15
+- branch: track/2.22
   charms:
   - name: mlflow_server
     path: .

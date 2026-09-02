@@ -36,7 +36,8 @@ def update_charmhub_token(repo: Client, charms: list[LocalCharmRepo], dry_run: b
               "--export /dev/stdout"
 
     print(cmd_str)
-    token = input("Copy and paste the token\n")
+    import getpass
+    token = getpass.getpass("Paste the token: ").strip()
 
     if not token:
         logger.warning("Token empty: SKIPPING")
@@ -63,13 +64,13 @@ if __name__ == "__main__":
         "--dry-run",
         dest="dry_run",
         action="store_true",
-        help="Print release commands without executing them (default)",
+        help="Print the secret updates without executing them (default)",
     )
     action_group.add_argument(
         "--apply",
         dest="dry_run",
         action="store_false",
-        help="Execute charmcraft release commands",
+        help="Apply the secret updates in GitHub",
     )
     parser.set_defaults(dry_run=True)
 
